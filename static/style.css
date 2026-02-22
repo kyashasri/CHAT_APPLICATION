@@ -1,0 +1,65 @@
+body {
+    font-family: Arial;
+    text-align: center;
+    margin: 20px;
+}
+
+input {
+    padding: 10px;
+    width: 250px;
+}
+
+button {
+    padding: 8px 15px;
+    cursor: pointer;
+}
+/* ========================= */
+/* Chat Styling */
+/* ========================= */
+
+.chat-box {
+    border: 1px solid gray;
+    height: 400px;
+    overflow-y: scroll;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    background-color: #ece5dd;
+    text-align: left;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.sender {
+    justify-content: flex-end;
+}
+
+.receiver {
+    justify-content: flex-start;
+}
+
+.bubble {
+    max-width: 60%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+.sender .bubble {
+    background-color: #dcf8c6;
+    text-align: right;
+}
+
+.receiver .bubble {
+    background-color: white;
+    text-align: left;
+}
+
+.time {
+    font-size: 10px;
+    color: gray;
+    margin-top: 5px;
+}
