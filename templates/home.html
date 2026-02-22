@@ -1,0 +1,33 @@
+ <!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+</head>
+<body>
+
+<h2>Welcome {{ name }} 🎉</h2>
+
+<hr>
+
+<h3>Start Private Chat</h3>
+
+<form action="{{ url_for('create_chat') }}" method="POST">
+    <input type="email"
+           name="email"
+           placeholder="Enter user's email"
+           required>
+
+    <button type="submit">Start Chat</button>
+</form>
+
+<br><br>
+
+<a href="{{ url_for('logout') }}">
+    <button>Logout</button>
+</a>
+
+</body>
+</html>
+
+
+
