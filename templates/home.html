@@ -10,37 +10,63 @@
 
 <hr>
 
-<!-- Private Chat -->
-<h3>Start Private Chat</h3>
+<div class="home-container">
 
-<form action="{{ url_for('create_chat') }}" method="POST">
-    <input type="email" name="email" placeholder="Enter user's email" required>
-    <button type="submit">Start Chat</button>
-</form>
+    <!-- LEFT COLUMN: Private Chat -->
+    <div class="column">
+        <h3>Start Private Chat</h3>
 
-<hr>
+        <form action="{{ url_for('create_chat') }}" method="POST">
+            <input type="email" name="email" placeholder="Enter user's email" required>
+            <button type="submit">Start Chat</button>
+        </form>
 
-<!-- Group Chat Section -->
-<div class="group-section">
-    <h3>Create Group</h3>
+        <h3>Your Private Chats</h3>
 
-    <form action="{{ url_for('create_group') }}" method="POST">
-        <input type="text" name="group_name" placeholder="Group Name" required><br><br>
-        <input type="text" name="members" placeholder="Emails (comma separated)" required><br><br>
-        <button type="submit">Create Group</button>
-    </form>
-
-    <div class="group-list">
-        <h4>Your Groups</h4>
-
-        {% for group in groups %}
-            <div class="group-item">
-                <a href="{{ url_for('group_chat', group_id=group._id) }}">
-                    {{ group.name }}
-                </a>
-            </div>
-        {% endfor %}
+        <div class="group-list">
+            {% for chat in chats %}
+                <div class="group-item">
+                    <a href="{{ url_for('chat', chat_id=chat._id) }}">
+                        {{ chat.name }}
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
     </div>
+
+    <!-- RIGHT COLUMN: Group Chat -->
+    <div class="column">
+        <h3>Create Group</h3>
+
+        <form action="{{ url_for('create_group') }}" method="POST" id="groupForm">
+
+            <input type="text" name="group_name" placeholder="Group Name" required><br><br>
+
+            <div id="memberContainer">
+                <div class="member-row">
+                    <input type="email" name="members[]" placeholder="Member email" required>
+                </div>
+            </div>
+
+            <button type="button" onclick="addMemberField()">+ Add Member</button>
+            <br><br>
+
+            <button type="submit">Create Group</button>
+        </form>
+
+        <h3>Your Groups</h3>
+
+        <div class="group-list">
+            {% for group in groups %}
+                <div class="group-item">
+                    <a href="{{ url_for('group_chat', group_id=group._id) }}">
+                        {{ group.name }}
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
 </div>
 
 <hr>
@@ -48,6 +74,23 @@
 <a href="{{ url_for('logout') }}">
     <button>Logout</button>
 </a>
+
+<!-- JavaScript for dynamic member fields -->
+<script>
+function addMemberField() {
+    var container = document.getElementById("memberContainer");
+
+    var div = document.createElement("div");
+    div.className = "member-row";
+
+    div.innerHTML = `
+        <input type="email" name="members[]" placeholder="Member email" required>
+        <button type="button" onclick="this.parentElement.remove()">Remove</button>
+    `;
+
+    container.appendChild(div);
+}
+</script>
 
 </body>
 </html>
