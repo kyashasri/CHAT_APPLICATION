@@ -1,7 +1,8 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
@@ -9,18 +10,40 @@
 
 <hr>
 
+<!-- Private Chat -->
 <h3>Start Private Chat</h3>
 
 <form action="{{ url_for('create_chat') }}" method="POST">
-    <input type="email"
-           name="email"
-           placeholder="Enter user's email"
-           required>
-
+    <input type="email" name="email" placeholder="Enter user's email" required>
     <button type="submit">Start Chat</button>
 </form>
 
-<br><br>
+<hr>
+
+<!-- Group Chat Section -->
+<div class="group-section">
+    <h3>Create Group</h3>
+
+    <form action="{{ url_for('create_group') }}" method="POST">
+        <input type="text" name="group_name" placeholder="Group Name" required><br><br>
+        <input type="text" name="members" placeholder="Emails (comma separated)" required><br><br>
+        <button type="submit">Create Group</button>
+    </form>
+
+    <div class="group-list">
+        <h4>Your Groups</h4>
+
+        {% for group in groups %}
+            <div class="group-item">
+                <a href="{{ url_for('group_chat', group_id=group._id) }}">
+                    {{ group.name }}
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<hr>
 
 <a href="{{ url_for('logout') }}">
     <button>Logout</button>
@@ -28,6 +51,3 @@
 
 </body>
 </html>
-
-
-
