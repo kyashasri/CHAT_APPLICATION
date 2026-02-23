@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ group.name }}</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>Group: {{ group.name }}</h2>
+
+<hr>
+
+<div class="chat-box" id="chat-box">
+
+    {% for msg in messages %}
+        <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}">
+            <div class="bubble">
+                <div class="sender-name">{{ msg.sender_name }}</div>
+                {{ msg.text }}
+                <div class="time">{{ msg.timestamp }}</div>
+            </div>
+        </div>
+    {% endfor %}
+
+</div>
+
+<hr>
+
+<input type="hidden" id="group_id" value="{{ group_id }}">
+
+<input type="text" id="message" placeholder="Type a message..." style="width:70%; padding:8px;">
+<button onclick="sendGroupMessage()">Send</button>
+
+<br><br>
+
+<a href="{{ url_for('home') }}">
+    <button>Back</button>
+</a>
+
+<script>
+    var socket = io();
+    var username = "{{ session['email'] }}";
+    var group_id = document.getElementById("group_id").value;
+    var sender_name = "{{ session['name'] }}";
+
+    socket.emit("join_group", { group_id: group_id });
+
+    function sendGroupMessage() {
+        var messageInput = document.getElementById("message");
+        var message = messageInput.value;
+
+        if (message.trim() === "") return;
+
+        socket.emit("send_group_message", {
+            message: message,
+            sender: username,
+            sender_name: sender_name,
+            group_id: group_id
+        });
+
+        messageInput.value = "";
+    }
+
+    socket.on("receive_group_message", function(data) {
+        var chatBox = document.getElementById("chat-box");
+
+        chatBox.innerHTML += `
+            <div class="message ${data.sender === username ? 'sender' : 'receiver'}">
+                <div class="bubble">
+                    <div class="sender-name">${data.sender_name}</div>
+                    ${data.message}
+                    <div class="time">${data.timestamp}</div>
+                </div>
+            </div>
+        `;
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+</script>
+
+</body>
+</html>
