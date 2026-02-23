@@ -28,7 +28,7 @@ mongo = PyMongo(app)
 users_collection = mongo.db.users
 chats_collection = mongo.db.chats
 messages_collection = mongo.db.messages
-groups_collection = mongo.db.groups   # group collection
+groups_collection = mongo.db.groups
 
 # ==============================
 # Mail Config
@@ -139,11 +139,29 @@ def home():
     if not session.get("logged_in"):
         return redirect(url_for("register"))
 
+    # GROUP LIST
     groups = list(groups_collection.find({"members": session["email"]}))
+
+    # PRIVATE CHAT LIST
+    chats = []
+    private_chats = chats_collection.find({
+        "type": "private",
+        "members": session["email"]
+    })
+
+    for chat in private_chats:
+        other_email = [m for m in chat["members"] if m != session["email"]][0]
+        user = users_collection.find_one({"email": other_email})
+
+        chats.append({
+            "_id": chat["_id"],
+            "name": user["name"] if user else other_email
+        })
 
     return render_template("home.html",
                            name=session.get("name"),
-                           groups=groups)
+                           groups=groups,
+                           chats=chats)
 
 
 # ====================================================
@@ -175,7 +193,7 @@ def create_chat():
     new_chat = {
         "type": "private",
         "members": [current_user, searched_email],
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now()
     }
 
     result = chats_collection.insert_one(new_chat)
@@ -212,16 +230,16 @@ def create_group():
         return {"error": "not logged in"}, 401
 
     group_name = request.form["group_name"]
-    members = request.form["members"].split(",")
+    members = request.form.getlist("members[]")
 
-    members = [m.strip() for m in members]
+    members = [m.strip() for m in members if m.strip()]
     members.append(session["email"])  # creator
 
     group = {
         "type": "group",
         "name": group_name,
         "members": members,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now()
     }
 
     result = groups_collection.insert_one(group)
@@ -271,7 +289,7 @@ def handle_message(data):
         "chat_id": ObjectId(chat_id),
         "sender": sender,
         "text": message,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now()
     }
 
     messages_collection.insert_one(msg_data)
@@ -303,7 +321,7 @@ def handle_group_message(data):
         "sender": sender,
         "sender_name": sender_name,
         "text": message,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now()
     }
 
     messages_collection.insert_one(msg_data)
