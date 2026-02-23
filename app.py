@@ -208,13 +208,8 @@ def chat(chat_id):
 
     messages = list(messages_collection.find(
         {"chat_id": ObjectId(chat_id)}
-    ).sort("timestamp", 1))
+    ).sort("_id", 1))
 
-    for msg in messages:
-        if isinstance(msg["timestamp"], str):
-            msg["timestamp"] = datetime.fromisoformat(msg["timestamp"]).strftime("%H:%M")
-        else:
-            msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
 
     return render_template("chat.html",
                            name=session.get("name"),
@@ -258,13 +253,10 @@ def group_chat(group_id):
 
     messages = list(messages_collection.find(
         {"group_id": ObjectId(group_id)}
-    ).sort("timestamp", 1))
+    ).sort("_id", 1))
 
-    for msg in messages:
-        if isinstance(msg["timestamp"], str):
-            msg["timestamp"] = datetime.fromisoformat(msg["timestamp"]).strftime("%H:%M")
-        else:
-            msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
+   
+   
 
     group = groups_collection.find_one({"_id": ObjectId(group_id)})
 
@@ -293,7 +285,7 @@ def handle_message(data):
         "chat_id": ObjectId(chat_id),
         "sender": sender,
         "text": message,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now()
     }
 
     messages_collection.insert_one(msg_data)
@@ -301,7 +293,7 @@ def handle_message(data):
     emit("receive_message", {
         "message": message,
         "sender": sender,
-        "timestamp": msg_data["timestamp"]
+        "timestamp": msg_data["timestamp"].strftime("%H:%M")
     }, room=chat_id)
 
 
@@ -323,7 +315,7 @@ def handle_group_message(data):
         "sender": sender,
         "sender_name": sender_name,
         "text": message,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now()
     }
 
     messages_collection.insert_one(msg_data)
@@ -332,7 +324,7 @@ def handle_group_message(data):
         "message": message,
         "sender": sender,
         "sender_name": sender_name,
-        "timestamp": msg_data["timestamp"]
+        "timestamp": msg_data["timestamp"].strftime("%H:%M")
     }, room=group_id)
 
 
