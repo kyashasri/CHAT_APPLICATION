@@ -13,8 +13,9 @@ button {
     padding: 8px 15px;
     cursor: pointer;
 }
+
 /* ========================= */
-/* Chat Styling */
+/* Chat Styling (WhatsApp like) */
 /* ========================= */
 
 .chat-box {
@@ -62,4 +63,41 @@ button {
     font-size: 10px;
     color: gray;
     margin-top: 5px;
+}
+
+/* ========================= */
+/* Group Section Styling */
+/* ========================= */
+
+.group-section {
+    margin-top: 30px;
+    padding: 15px;
+    border: 1px solid #ccc;
+}
+
+.group-list {
+    margin-top: 15px;
+}
+
+.group-item {
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    background: #f7f7f7;
+}
+
+.group-item a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+}
+
+/* sender name style */
+
+
+.sender-name {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
 }
