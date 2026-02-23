@@ -63,20 +63,22 @@
     }
 
     socket.on("receive_group_message", function(data) {
-        var chatBox = document.getElementById("chat-box");
+    var chatBox = document.getElementById("chat-box");
 
-        chatBox.innerHTML += `
-            <div class="message ${data.sender === username ? 'sender' : 'receiver'}">
-                <div class="bubble">
-                    <div class="sender-name">${data.sender_name}</div>
-                    ${data.message}
-                    <div class="time">${data.timestamp}</div>
+    chatBox.innerHTML += `
+        <div class="message ${data.sender === username ? 'sender' : 'receiver'}">
+            <div class="bubble">
+                <div class="sender-name">${data.sender_name}</div>
+                ${data.message}
+                <div class="time">
+                    ${new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        chatBox.scrollTop = chatBox.scrollHeight;
-    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+});
 </script>
 
 </body>
