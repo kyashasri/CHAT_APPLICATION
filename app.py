@@ -139,10 +139,8 @@ def home():
     if not session.get("logged_in"):
         return redirect(url_for("register"))
 
-    # GROUP LIST
     groups = list(groups_collection.find({"members": session["email"]}))
 
-    # PRIVATE CHAT LIST
     chats = []
     private_chats = chats_collection.find({
         "type": "private",
@@ -194,7 +192,6 @@ def create_chat():
         "type": "private",
         "members": [current_user, searched_email],
         "created_at": datetime.now()
-
     }
 
     result = chats_collection.insert_one(new_chat)
@@ -214,7 +211,10 @@ def chat(chat_id):
     ).sort("timestamp", 1))
 
     for msg in messages:
-        msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
+        if isinstance(msg["timestamp"], str):
+            msg["timestamp"] = datetime.fromisoformat(msg["timestamp"]).strftime("%H:%M")
+        else:
+            msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
 
     return render_template("chat.html",
                            name=session.get("name"),
@@ -234,7 +234,7 @@ def create_group():
     members = request.form.getlist("members[]")
 
     members = [m.strip() for m in members if m.strip()]
-    members.append(session["email"])  # creator
+    members.append(session["email"])
 
     group = {
         "type": "group",
@@ -261,7 +261,10 @@ def group_chat(group_id):
     ).sort("timestamp", 1))
 
     for msg in messages:
-        msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
+        if isinstance(msg["timestamp"], str):
+            msg["timestamp"] = datetime.fromisoformat(msg["timestamp"]).strftime("%H:%M")
+        else:
+            msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
 
     group = groups_collection.find_one({"_id": ObjectId(group_id)})
 
@@ -291,18 +294,15 @@ def handle_message(data):
         "sender": sender,
         "text": message,
         "timestamp": datetime.now().isoformat()
-
     }
 
     messages_collection.insert_one(msg_data)
 
-    formatted_time = msg_data["timestamp"].strftime("%H:%M")
-
     emit("receive_message", {
-    "message": message,
-    "sender": sender,
-    "timestamp": msg_data["timestamp"]
-}, room=chat_id)
+        "message": message,
+        "sender": sender,
+        "timestamp": msg_data["timestamp"]
+    }, room=chat_id)
 
 
 # ===== GROUP SOCKET =====
@@ -324,19 +324,16 @@ def handle_group_message(data):
         "sender_name": sender_name,
         "text": message,
         "timestamp": datetime.now().isoformat()
-
     }
 
     messages_collection.insert_one(msg_data)
 
-    formatted_time = msg_data["timestamp"].strftime("%H:%M")
-
     emit("receive_group_message", {
-    "message": message,
-    "sender": sender,
-    "sender_name": sender_name,
-    "timestamp": msg_data["timestamp"]
-}, room=group_id)
+        "message": message,
+        "sender": sender,
+        "sender_name": sender_name,
+        "timestamp": msg_data["timestamp"]
+    }, room=group_id)
 
 
 # ====================================================
@@ -352,4 +349,3 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port)
-
