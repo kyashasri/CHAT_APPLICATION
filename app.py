@@ -194,6 +194,7 @@ def create_chat():
         "type": "private",
         "members": [current_user, searched_email],
         "created_at": datetime.now()
+
     }
 
     result = chats_collection.insert_one(new_chat)
@@ -289,7 +290,8 @@ def handle_message(data):
         "chat_id": ObjectId(chat_id),
         "sender": sender,
         "text": message,
-        "timestamp": datetime.now()
+        "timestamp": datetime.now().isoformat()
+
     }
 
     messages_collection.insert_one(msg_data)
@@ -297,10 +299,10 @@ def handle_message(data):
     formatted_time = msg_data["timestamp"].strftime("%H:%M")
 
     emit("receive_message", {
-        "message": message,
-        "sender": sender,
-        "timestamp": formatted_time
-    }, room=chat_id)
+    "message": message,
+    "sender": sender,
+    "timestamp": msg_data["timestamp"]
+}, room=chat_id)
 
 
 # ===== GROUP SOCKET =====
@@ -321,7 +323,8 @@ def handle_group_message(data):
         "sender": sender,
         "sender_name": sender_name,
         "text": message,
-        "timestamp": datetime.now()
+        "timestamp": datetime.now().isoformat()
+
     }
 
     messages_collection.insert_one(msg_data)
@@ -329,11 +332,11 @@ def handle_group_message(data):
     formatted_time = msg_data["timestamp"].strftime("%H:%M")
 
     emit("receive_group_message", {
-        "message": message,
-        "sender": sender,
-        "sender_name": sender_name,
-        "timestamp": formatted_time
-    }, room=group_id)
+    "message": message,
+    "sender": sender,
+    "sender_name": sender_name,
+    "timestamp": msg_data["timestamp"]
+}, room=group_id)
 
 
 # ====================================================
@@ -349,3 +352,4 @@ def logout():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port)
+
