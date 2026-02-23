@@ -65,14 +65,23 @@ button {
     margin-top: 5px;
 }
 
+/* sender name */
+.sender-name {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
 /* ========================= */
 /* Group Section Styling */
 /* ========================= */
 
 .group-section {
-    margin-top: 30px;
+    margin-top: 20px;
     padding: 15px;
     border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #f9f9f9;
 }
 
 .group-list {
@@ -93,11 +102,36 @@ button {
     font-weight: bold;
 }
 
-/* sender name style */
+/* ========================= */
+/* Two Column Layout (Home) */
+/* ========================= */
 
+.home-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
 
-.sender-name {
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 4px;
+.column {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f9f9f9;
+}
+
+/* ========================= */
+/* Dynamic Member Rows */
+/* ========================= */
+
+.member-row {
+    margin-bottom: 8px;
+}
+
+.member-row input {
+    width: 200px;
+}
+
+.member-row button {
+    margin-left: 5px;
 }
