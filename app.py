@@ -28,6 +28,7 @@ mongo = PyMongo(app)
 users_collection = mongo.db.users
 chats_collection = mongo.db.chats
 messages_collection = mongo.db.messages
+groups_collection = mongo.db.groups   # group collection
 
 # ==============================
 # Mail Config
@@ -77,6 +78,7 @@ def register():
 
     return render_template("index.html")
 
+
 # ====================================================
 # VERIFY OTP
 # ====================================================
@@ -103,6 +105,7 @@ def verify():
 
     return render_template("verify.html")
 
+
 # ====================================================
 # LOGIN
 # ====================================================
@@ -127,6 +130,7 @@ def login():
 
     return render_template("login.html")
 
+
 # ====================================================
 # HOME
 # ====================================================
@@ -134,7 +138,13 @@ def login():
 def home():
     if not session.get("logged_in"):
         return redirect(url_for("register"))
-    return render_template("home.html", name=session.get("name"))
+
+    groups = list(groups_collection.find({"members": session["email"]}))
+
+    return render_template("home.html",
+                           name=session.get("name"),
+                           groups=groups)
+
 
 # ====================================================
 # CREATE PRIVATE CHAT
@@ -171,8 +181,9 @@ def create_chat():
     result = chats_collection.insert_one(new_chat)
     return redirect(url_for("chat", chat_id=str(result.inserted_id)))
 
+
 # ====================================================
-# CHAT PAGE
+# PRIVATE CHAT PAGE
 # ====================================================
 @app.route("/chat/<chat_id>")
 def chat(chat_id):
@@ -191,6 +202,56 @@ def chat(chat_id):
                            messages=messages,
                            chat_id=chat_id)
 
+
+# ====================================================
+# GROUP CREATE
+# ====================================================
+@app.route("/create_group", methods=["POST"])
+def create_group():
+    if not session.get("logged_in"):
+        return {"error": "not logged in"}, 401
+
+    group_name = request.form["group_name"]
+    members = request.form["members"].split(",")
+
+    members = [m.strip() for m in members]
+    members.append(session["email"])  # creator
+
+    group = {
+        "type": "group",
+        "name": group_name,
+        "members": members,
+        "created_at": datetime.utcnow()
+    }
+
+    result = groups_collection.insert_one(group)
+
+    return redirect(url_for("group_chat", group_id=str(result.inserted_id)))
+
+
+# ====================================================
+# GROUP CHAT PAGE
+# ====================================================
+@app.route("/group/<group_id>")
+def group_chat(group_id):
+    if not session.get("logged_in"):
+        return redirect(url_for("register"))
+
+    messages = list(messages_collection.find(
+        {"group_id": ObjectId(group_id)}
+    ).sort("timestamp", 1))
+
+    for msg in messages:
+        msg["timestamp"] = msg["timestamp"].strftime("%H:%M")
+
+    group = groups_collection.find_one({"_id": ObjectId(group_id)})
+
+    return render_template("group_chat.html",
+                           group=group,
+                           messages=messages,
+                           group_id=group_id)
+
+
 # ====================================================
 # SOCKET EVENTS
 # ====================================================
@@ -198,6 +259,7 @@ def chat(chat_id):
 @socketio.on("join_room")
 def handle_join(data):
     join_room(data["chat_id"])
+
 
 @socketio.on("send_message")
 def handle_message(data):
@@ -222,6 +284,40 @@ def handle_message(data):
         "timestamp": formatted_time
     }, room=chat_id)
 
+
+# ===== GROUP SOCKET =====
+@socketio.on("join_group")
+def join_group(data):
+    join_room(data["group_id"])
+
+
+@socketio.on("send_group_message")
+def handle_group_message(data):
+    message = data["message"]
+    sender = data["sender"]
+    sender_name = data["sender_name"]
+    group_id = data["group_id"]
+
+    msg_data = {
+        "group_id": ObjectId(group_id),
+        "sender": sender,
+        "sender_name": sender_name,
+        "text": message,
+        "timestamp": datetime.utcnow()
+    }
+
+    messages_collection.insert_one(msg_data)
+
+    formatted_time = msg_data["timestamp"].strftime("%H:%M")
+
+    emit("receive_group_message", {
+        "message": message,
+        "sender": sender,
+        "sender_name": sender_name,
+        "timestamp": formatted_time
+    }, room=group_id)
+
+
 # ====================================================
 # LOGOUT
 # ====================================================
@@ -230,11 +326,8 @@ def logout():
     session.clear()
     return redirect(url_for("register"))
 
+
 # ====================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port)
-
-
-
-
