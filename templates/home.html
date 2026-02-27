@@ -6,77 +6,93 @@
 </head>
 <body>
 
-<h2>Welcome {{ name }} 🎉</h2>
+<div class="app-container">
 
-<hr>
+    <!-- =========================
+         LEFT SIDEBAR
+    ========================== -->
+    <div class="sidebar">
 
-<div class="home-container">
+    <div class="sidebar-split">
 
-    <!-- LEFT COLUMN: Private Chat -->
-    <div class="column">
-        <h3>Start Private Chat</h3>
-
-        <form action="{{ url_for('create_chat') }}" method="POST">
-            <input type="email" name="email" placeholder="Enter user's email" required>
-            <button type="submit">Start Chat</button>
-        </form>
-
-        <h3>Your Private Chats</h3>
-
-        <div class="group-list">
-            {% for chat in chats %}
-                <div class="group-item">
-                    <a href="{{ url_for('chat', chat_id=chat._id) }}">
-                        {{ chat.name }}
-                    </a>
-                </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- RIGHT COLUMN: Group Chat -->
-    <div class="column">
-        <h3>Create Group</h3>
-
-        <form action="{{ url_for('create_group') }}" method="POST" id="groupForm">
-
-            <input type="text" name="group_name" placeholder="Group Name" required><br><br>
-
-            <div id="memberContainer">
-                <div class="member-row">
-                    <input type="email" name="members[]" placeholder="Member email" required>
-                </div>
+        <!-- ================= PRIVATE SECTION ================= -->
+        <div class="private-section">
+            <div class="sidebar-header">
+                💬 Private Chats
             </div>
 
-            <button type="button" onclick="addMemberField()">+ Add Member</button>
-            <br><br>
+            <div style="padding:15px;">
+                <form action="{{ url_for('create_chat') }}" method="POST">
+                    <input type="email" name="email" placeholder="Start chat with email" required>
+                    <button type="submit">Start Chat</button>
+                </form>
+            </div>
 
-            <button type="submit">Create Group</button>
-        </form>
-
-        <h3>Your Groups</h3>
-
-        <div class="group-list">
-            {% for group in groups %}
-                <div class="group-item">
-                    <a href="{{ url_for('group_chat', group_id=group._id) }}">
-                        {{ group.name }}
-                    </a>
-                </div>
-            {% endfor %}
+            <div class="chat-list">
+                {% for chat in chats %}
+                    <div class="chat-item">
+                        <a href="{{ url_for('chat', chat_id=chat._id) }}" class="chat-item">
+                            {{ chat.name }}
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
+
+
+        <!-- ================= GROUP SECTION ================= -->
+        <div class="group-section">
+            <div class="sidebar-header">
+                👥 Group Chats
+            </div>
+
+            <div style="padding:15px;">
+                <form action="{{ url_for('create_group') }}" method="POST">
+                    <input type="text" name="group_name" placeholder="Group Name" required>
+
+                    <div id="memberContainer">
+                        <div class="member-row">
+                            <input type="email" name="members[]" placeholder="Member email" required>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="addMemberField()" style="margin-top:5px;">
+                        + Add Member
+                    </button>
+
+                    <button type="submit" style="margin-top:8px;">
+                        Create Group
+                    </button>
+                </form>
+            </div>
+
+            <div class="chat-list">
+                {% for group in groups %}
+                    <div class="chat-item">
+                        <a href="{{ url_for('group_chat', group_id=group._id) }}" class="chat-item">
+                            {{ group.name }}
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+    <div style="padding:15px;">
+        <a href="{{ url_for('logout') }}">
+            <button style="width:100%; background:#ff4d4d;">Logout</button>
+        </a>
     </div>
 
 </div>
 
-<hr>
+<!-- =========================
+     JavaScript
+========================== -->
 
-<a href="{{ url_for('logout') }}">
-    <button>Logout</button>
-</a>
-
-<!-- JavaScript for dynamic member fields -->
 <script>
+// Add member row
 function addMemberField() {
     var container = document.getElementById("memberContainer");
 
@@ -90,6 +106,19 @@ function addMemberField() {
 
     container.appendChild(div);
 }
+
+// Popup message from URL
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("error")) {
+        alert(params.get("error"));
+    }
+
+    if (params.get("success")) {
+        alert(params.get("success"));
+    }
+};
 </script>
 
 </body>
