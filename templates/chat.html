@@ -7,78 +7,94 @@
 </head>
 <body>
 
-<h2>Welcome {{ name }} 👋</h2>
+<div class="app-container">
 
-<hr>
+    <div class="chat-area">
 
-<div class="chat-box" id="chat-box">
-
-    {% for msg in messages %}
-        <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}">
-            <div class="bubble">
-                {{ msg.text }}
-                <div class="time">{{ msg.timestamp }}</div>
-            </div>
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <button onclick="goBack()" class="back-btn">← Back</button>
+            <span class="chat-title">{{ name }}</span>
         </div>
-    {% endfor %}
 
+        <!-- Chat Messages -->
+        <div class="chat-box" id="chat-box">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}">
+                    <div class="bubble">
+                        {{ msg.text }}
+                        <div class="time">{{ msg.timestamp }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Input Bar -->
+        <div class="input-bar">
+            <input type="hidden" id="chat_id" value="{{ chat_id }}">
+            <input type="text" id="message" placeholder="Type a message..." autocomplete="off">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+
+    </div>
 </div>
 
-<hr>
-
-<input type="hidden" id="chat_id" value="{{ chat_id }}">
-
-<input type="text" id="message" placeholder="Type a message..." style="width:70%; padding:8px;">
-<button onclick="sendMessage()" style="padding:8px 15px;">Send</button>
-
-<br><br>
-
-<a href="{{ url_for('home') }}">
-    <button>Back</button>
-</a>
-
 <script>
-    var socket = io();
-    var username = "{{ session['email'] }}";
-    var chat_id = document.getElementById("chat_id").value;
+function goBack() {
+    window.history.back();
+}
 
-    socket.emit("join_room", { chat_id: chat_id });
+var socket = io();
+var username = "{{ session['email'] }}";
+var chat_id = document.getElementById("chat_id").value;
+var chatBox = document.getElementById("chat-box");
 
-    function sendMessage() {
-        var messageInput = document.getElementById("message");
-        var message = messageInput.value;
+// Join room
+socket.emit("join_room", { chat_id: chat_id });
 
-        if (message.trim() === "") return;
+// Send message function
+function sendMessage() {
+    var messageInput = document.getElementById("message");
+    var message = messageInput.value.trim();
+    if (!message) return;
 
-        socket.emit("send_message", {
-            message: message,
-            sender: username,
-            chat_id: chat_id
-        });
+    socket.emit("send_message", {
+        message: message,
+        sender: username,
+        chat_id: chat_id
+    });
 
-        messageInput.value = "";
+    messageInput.value = "";
+}
+
+// Send message on Enter key
+document.getElementById("message").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
     }
+});
 
-    socket.on("receive_message", function(data) {
-    var chatBox = document.getElementById("chat-box");
+// Receive messages
+socket.on("receive_message", function(data) {
+    var messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", data.sender === username ? "sender" : "receiver");
 
-    chatBox.innerHTML += `
-        <div class="message ${data.sender === username ? 'sender' : 'receiver'}">
-            <div class="bubble">
-                ${data.message}
-                <div class="time">
-                    ${data.timestamp}
-                </div>
-            </div>
+    messageDiv.innerHTML = `
+        <div class="bubble">
+            ${data.message}
+            <div class="time">${data.timestamp}</div>
         </div>
     `;
-
+    chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 });
+
+// Auto scroll on load
+window.onload = function() {
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
 </script>
 
 </body>
 </html>
-
-
-
