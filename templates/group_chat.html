@@ -7,78 +7,98 @@
 </head>
 <body>
 
-<h2>Group: {{ group.name }}</h2>
+<div class="app-container">
 
-<hr>
+    <div class="chat-area">
 
-<div class="chat-box" id="chat-box">
-
-    {% for msg in messages %}
-        <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}">
-            <div class="bubble">
-                <div class="sender-name">{{ msg.sender_name }}</div>
-                {{ msg.text }}
-                <div class="time">{{ msg.timestamp }}</div>
-            </div>
+        <!-- Header -->
+        <div class="chat-header">
+            <button onclick="goBack()" class="back-btn">← Back</button>
+            <span class="chat-title">{{ group.name }}</span>
         </div>
-    {% endfor %}
+
+        <!-- Messages -->
+        <div class="chat-box" id="chat-box">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}">
+                    <div class="bubble">
+                        {% if msg.sender != session['email'] %}
+                            <div class="sender-name">{{ msg.sender_name }}</div>
+                        {% endif %}
+                        {{ msg.text }}
+                        <div class="time">{{ msg.timestamp }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Input -->
+        <div class="input-bar">
+            <input type="hidden" id="group_id" value="{{ group_id }}">
+            <input type="text" id="message" placeholder="Type a message...">
+            <button onclick="sendGroupMessage()">Send</button>
+        </div>
+
+    </div>
 
 </div>
 
-<hr>
-
-<input type="hidden" id="group_id" value="{{ group_id }}">
-
-<input type="text" id="message" placeholder="Type a message..." style="width:70%; padding:8px;">
-<button onclick="sendGroupMessage()">Send</button>
-
-<br><br>
-
-<a href="{{ url_for('home') }}">
-    <button>Back</button>
-</a>
-
 <script>
-    var socket = io();
-    var username = "{{ session['email'] }}";
-    var sender_name = "{{ session['name'] }}";
-    var group_id = document.getElementById("group_id").value;
+function goBack() {
+    window.history.back();
+}
 
-    socket.emit("join_group", { group_id: group_id });
+var socket = io();
+var username = "{{ session['email'] }}";
+var sender_name = "{{ session['name'] }}";
+var group_id = document.getElementById("group_id").value;
+var chatBox = document.getElementById("chat-box");
 
-    function sendGroupMessage() {
-        var messageInput = document.getElementById("message");
-        var message = messageInput.value;
+// Join group room
+socket.emit("join_group", { group_id: group_id });
 
-        if (message.trim() === "") return;
+// Send group message
+function sendGroupMessage() {
+    var messageInput = document.getElementById("message");
+    var message = messageInput.value.trim();
+    if (!message) return;
 
-        socket.emit("send_group_message", {
-            message: message,
-            sender: username,
-            sender_name: sender_name,
-            group_id: group_id
-        });
+    socket.emit("send_group_message", {
+        message: message,
+        sender: username,
+        sender_name: sender_name,
+        group_id: group_id
+    });
 
-        messageInput.value = "";
+    messageInput.value = "";
+}
+
+// Enter key sends group message
+document.getElementById("message").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        sendGroupMessage();
     }
+});
 
-    socket.on("receive_group_message", function(data) {
-    var chatBox = document.getElementById("chat-box");
-
+// Receive group messages
+socket.on("receive_group_message", function(data) {
     chatBox.innerHTML += `
         <div class="message ${data.sender === username ? 'sender' : 'receiver'}">
             <div class="bubble">
-                <div class="sender-name">${data.sender_name}</div>
+                ${data.sender !== username ? `<div class="sender-name">${data.sender_name}</div>` : ""}
                 ${data.message}
-                <div class="time">
-                    ${data.timestamp}
-                </div>
+                <div class="time">${data.timestamp}</div>
             </div>
         </div>
     `;
-
     chatBox.scrollTop = chatBox.scrollHeight;
 });
+
+// Auto scroll on load
+window.onload = function() {
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
 </script>
 
 </body>
