@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mail import Mail, Message
 from flask_pymongo import PyMongo
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 import os
 import random
@@ -56,8 +56,7 @@ def register():
         password = request.form["password"]
 
         if users_collection.find_one({"email": email}):
-            flash("Email already registered!")
-            return redirect(url_for("register"))
+            return redirect(url_for("register", error="Email already registered!"))
 
         otp = random.randint(100000, 999999)
 
@@ -65,19 +64,18 @@ def register():
         session["name"] = name
         session["email"] = email
         session["password"] = password
+        session["otp_expiry"] = (datetime.now() + timedelta(minutes=2)).timestamp()
 
         try:
             msg = Message("Your OTP Code", recipients=[email])
             msg.body = f"Your OTP is: {otp}"
             mail.send(msg)
 
-            flash("OTP sent to email!")
-            return redirect(url_for("verify"))
+            return redirect(url_for("verify", success="OTP sent to your email"))
         except Exception as e:
             return f"Mail Error: {e}"
 
     return render_template("index.html")
-
 
 # ====================================================
 # VERIFY OTP
@@ -86,6 +84,13 @@ def register():
 def verify():
     if request.method == "POST":
         entered_otp = request.form["otp"]
+
+        expiry_time = session.get("otp_expiry")
+
+        if not expiry_time or datetime.now().timestamp() > expiry_time:
+            session.pop("otp", None)
+            session.pop("otp_expiry", None)
+            return redirect(url_for("register", error="OTP expired! Please register again."))
 
         if entered_otp == session.get("otp"):
             hashed_password = generate_password_hash(session["password"])
@@ -97,15 +102,15 @@ def verify():
             })
 
             session.pop("otp", None)
+            session.pop("otp_expiry", None)
             session["logged_in"] = True
 
             return redirect(url_for("home"))
         else:
-            flash("Invalid OTP")
+            return redirect(url_for("verify", error="Invalid OTP"))
 
-    return render_template("verify.html")
-
-
+    return render_template("verify.html",
+                           expiry=session.get("otp_expiry"))
 # ====================================================
 # LOGIN
 # ====================================================
@@ -126,10 +131,86 @@ def login():
             session["email"] = user["email"]
             return redirect(url_for("home"))
         else:
-            flash("Invalid Email or Password")
+            return redirect(url_for("login", error="Invalid Email or Password"))
 
     return render_template("login.html")
 
+# ====================================================
+# FORGOT PASSWORD
+# ====================================================
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form["email"]
+
+        user = users_collection.find_one({"email": email})
+        if not user:
+            return redirect(url_for("forgot_password", error="Email not registered!"))
+
+        otp = random.randint(100000, 999999)
+
+        session["reset_otp"] = str(otp)
+        session["reset_email"] = email
+        session["reset_otp_expiry"] = (datetime.now() + timedelta(minutes=2)).timestamp()
+
+        try:
+            msg = Message("Password Reset OTP", recipients=[email])
+            msg.body = f"Your Password Reset OTP is: {otp}\nValid for 2 minutes."
+            mail.send(msg)
+
+            return redirect(url_for("verify_reset_otp", success="OTP sent to your email (Valid 2 minutes)"))
+        except Exception as e:
+            return f"Mail Error: {e}"
+
+    return render_template("forgot_password.html")
+# ====================================================
+# VERIFY RESET OTP
+# ====================================================
+@app.route("/verify_reset_otp", methods=["GET", "POST"])
+def verify_reset_otp():
+    if request.method == "POST":
+        entered_otp = request.form["otp"]
+
+        expiry_time = session.get("reset_otp_expiry")
+
+        if not expiry_time or datetime.now().timestamp() > expiry_time:
+            session.pop("reset_otp", None)
+            session.pop("reset_email", None)
+            session.pop("reset_otp_expiry", None)
+            return redirect(url_for("forgot_password", error="OTP expired! Please request again."))
+
+        if entered_otp == session.get("reset_otp"):
+            return redirect(url_for("reset_password"))
+        else:
+            return redirect(url_for("verify_reset_otp", error="Invalid OTP"))
+
+    return render_template("verify_reset_otp.html",
+                           expiry=session.get("reset_otp_expiry"))
+# ====================================================
+# RESET PASSWORD
+# ====================================================
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_password():
+    if request.method == "POST":
+        new_password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+
+        if new_password != confirm_password:
+            return redirect(url_for("reset_password", error="Passwords do not match!"))
+
+        hashed_password = generate_password_hash(new_password)
+
+        users_collection.update_one(
+            {"email": session.get("reset_email")},
+            {"$set": {"password": hashed_password}}
+        )
+
+        session.pop("reset_otp", None)
+        session.pop("reset_email", None)
+
+        return redirect(url_for("login", success="Password updated successfully!"))
+
+    return render_template("reset_password.html")
 
 # ====================================================
 # HOME
@@ -161,24 +242,23 @@ def home():
                            groups=groups,
                            chats=chats)
 
-
 # ====================================================
 # CREATE PRIVATE CHAT
 # ====================================================
 @app.route("/create_chat", methods=["POST"])
 def create_chat():
     if not session.get("logged_in"):
-        return {"error": "Not logged in"}, 401
+        return redirect(url_for("login"))
 
     current_user = session["email"]
-    searched_email = request.form["email"]
+    searched_email = request.form["email"].strip()
 
     if current_user == searched_email:
-        return {"error": "You cannot chat with yourself"}, 400
+        return redirect(url_for("home", error="You cannot chat with yourself"))
 
     user = users_collection.find_one({"email": searched_email})
     if not user:
-        return {"error": "User not found"}, 404
+        return redirect(url_for("home", error="User not registered!"))
 
     existing_chat = chats_collection.find_one({
         "type": "private",
@@ -197,7 +277,6 @@ def create_chat():
     result = chats_collection.insert_one(new_chat)
     return redirect(url_for("chat", chat_id=str(result.inserted_id)))
 
-
 # ====================================================
 # PRIVATE CHAT PAGE
 # ====================================================
@@ -206,42 +285,61 @@ def chat(chat_id):
     if not session.get("logged_in"):
         return redirect(url_for("register"))
 
+    chat_data = chats_collection.find_one({"_id": ObjectId(chat_id)})
+
+    if not chat_data or session["email"] not in chat_data["members"]:
+        return redirect(url_for("home", error="Unauthorized access"))
+
     messages = list(messages_collection.find(
         {"chat_id": ObjectId(chat_id)}
     ).sort("_id", 1))
-
 
     return render_template("chat.html",
                            name=session.get("name"),
                            messages=messages,
                            chat_id=chat_id)
 
-
 # ====================================================
-# GROUP CREATE
+# CREATE GROUP
 # ====================================================
 @app.route("/create_group", methods=["POST"])
 def create_group():
     if not session.get("logged_in"):
-        return {"error": "not logged in"}, 401
+        return redirect(url_for("login"))
 
     group_name = request.form["group_name"]
     members = request.form.getlist("members[]")
 
-    members = [m.strip() for m in members if m.strip()]
-    members.append(session["email"])
+    valid_members = []
+    invalid_members = []
+
+    for m in members:
+        m = m.strip()
+        if not m:
+            continue
+
+        user = users_collection.find_one({"email": m})
+        if user:
+            valid_members.append(m)
+        else:
+            invalid_members.append(m)
+
+    if invalid_members:
+        error_msg = "These users are not registered: " + ", ".join(invalid_members)
+        return redirect(url_for("home", error=error_msg))
+
+    valid_members.append(session["email"])
 
     group = {
         "type": "group",
         "name": group_name,
-        "members": members,
+        "members": valid_members,
         "created_at": datetime.now()
     }
 
-    result = groups_collection.insert_one(group)
+    groups_collection.insert_one(group)
 
-    return redirect(url_for("group_chat", group_id=str(result.inserted_id)))
-
+    return redirect(url_for("home", success="Group created successfully!"))
 
 # ====================================================
 # GROUP CHAT PAGE
@@ -251,82 +349,66 @@ def group_chat(group_id):
     if not session.get("logged_in"):
         return redirect(url_for("register"))
 
+    group = groups_collection.find_one({"_id": ObjectId(group_id)})
+
+    if not group or session["email"] not in group["members"]:
+        return redirect(url_for("home", error="Unauthorized access"))
+
     messages = list(messages_collection.find(
         {"group_id": ObjectId(group_id)}
     ).sort("_id", 1))
-
-   
-   
-
-    group = groups_collection.find_one({"_id": ObjectId(group_id)})
 
     return render_template("group_chat.html",
                            group=group,
                            messages=messages,
                            group_id=group_id)
 
-
 # ====================================================
 # SOCKET EVENTS
 # ====================================================
-
 @socketio.on("join_room")
 def handle_join(data):
     join_room(data["chat_id"])
 
-
 @socketio.on("send_message")
 def handle_message(data):
-    message = data["message"]
-    sender = data["sender"]
-    chat_id = data["chat_id"]
-
     msg_data = {
-        "chat_id": ObjectId(chat_id),
-        "sender": sender,
-        "text": message,
+        "chat_id": ObjectId(data["chat_id"]),
+        "sender": data["sender"],
+        "text": data["message"],
         "timestamp": datetime.now()
     }
 
     messages_collection.insert_one(msg_data)
 
     emit("receive_message", {
-        "message": message,
-        "sender": sender,
+        "message": data["message"],
+        "sender": data["sender"],
         "timestamp": msg_data["timestamp"].strftime("%H:%M")
-    }, room=chat_id)
+    }, room=data["chat_id"])
 
-
-# ===== GROUP SOCKET =====
 @socketio.on("join_group")
-def join_group(data):
+def join_group_socket(data):
     join_room(data["group_id"])
-
 
 @socketio.on("send_group_message")
 def handle_group_message(data):
-    message = data["message"]
-    sender = data["sender"]
-    sender_name = data["sender_name"]
-    group_id = data["group_id"]
-
     msg_data = {
-        "group_id": ObjectId(group_id),
-        "sender": sender,
-        "sender_name": sender_name,
-        "text": message,
+        "group_id": ObjectId(data["group_id"]),
+        "sender": data["sender"],
+        "sender_name": data["sender_name"],
+        "text": data["message"],
         "timestamp": datetime.now()
     }
 
     messages_collection.insert_one(msg_data)
 
     emit("receive_group_message", {
-        "message": message,
-        "sender": sender,
-        "sender_name": sender_name,
+        "message": data["message"],
+        "sender": data["sender"],
+        "sender_name": data["sender_name"],
         "timestamp": msg_data["timestamp"].strftime("%H:%M")
-    }, room=group_id)
-
+    }, room=data["group_id"])
 
 # ====================================================
 # LOGOUT
@@ -335,7 +417,6 @@ def handle_group_message(data):
 def logout():
     session.clear()
     return redirect(url_for("register"))
-
 
 # ====================================================
 if __name__ == "__main__":
