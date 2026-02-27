@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Reset OTP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="auth-wrapper">
+    <div class="auth-container">
+        <h2>Verify Reset OTP</h2>
+
+        <!-- Countdown Timer -->
+        <div id="timer" style="color:red; font-weight:bold; margin-bottom:10px;">
+            02:00
+        </div>
+
+        <form method="POST">
+            <input type="text" name="otp" placeholder="Enter OTP" required>
+            <button type="submit" id="verifyBtn">Verify</button>
+        </form>
+    </div>
+</div>
+
+<script>
+window.onload = function() {
+
+    // ==========================
+    // POPUP ALERTS
+    // ==========================
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("success")) {
+        alert(params.get("success"));   // OTP Sent popup
+    }
+
+    if (params.get("error")) {
+        alert(params.get("error"));     // Invalid OTP popup
+    }
+
+    // ==========================
+    // OTP COUNTDOWN TIMER
+    // ==========================
+    let expiryTime = {{ expiry | default(0) }};
+    let timerElement = document.getElementById("timer");
+    let verifyBtn = document.getElementById("verifyBtn");
+
+    function startTimer() {
+
+        let interval = setInterval(function() {
+
+            let now = Math.floor(Date.now() / 1000);
+            let remaining = Math.floor(expiryTime - now);
+
+            if (remaining <= 0) {
+                clearInterval(interval);
+
+                timerElement.innerHTML = "OTP Expired!";
+                verifyBtn.disabled = true;
+
+                alert("OTP has expired! Please request a new OTP.");
+
+                setTimeout(function() {
+                    window.location.href = "{{ url_for('forgot_password') }}";
+                }, 2000);
+
+                return;
+            }
+
+            let minutes = Math.floor(remaining / 60);
+            let seconds = remaining % 60;
+
+            timerElement.innerHTML =
+                String(minutes).padStart(2, '0') + ":" +
+                String(seconds).padStart(2, '0');
+
+        }, 1000);
+    }
+
+    startTimer();
+};
+</script>
+
+</body>
+</html>
