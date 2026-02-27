@@ -6,24 +6,40 @@
 </head>
 <body>
 
-<h2>Login</h2>
+<div class="center-wrapper">
+    <div class="form-card">
+        <h2>Welcome Back</h2>
 
-<form method="POST">
-    <input type="email" name="email" placeholder="Email" required><br><br>
-    <input type="password" name="password" placeholder="Password" required><br><br>
-    <button type="submit">Login</button>
-</form>
+        <form method="POST">
+            <input type="email" name="email" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password" required>
 
-{% with messages = get_flashed_messages() %}
-    {% for message in messages %}
-        <p>{{ message }}</p>
-    {% endfor %}
-{% endwith %}
+            <button type="submit">Login</button>
+        </form>
 
-<br>
-<a href="{{ url_for('register') }}">
-    <button>Go to Register</button>
-</a>
+        
 
+        <p class="switch-link" style="margin-top: 10px;">
+            Don’t have an account?
+            <a href="{{ url_for('register') }}">Register</a>
+        </p>
+
+        <p class="switch-link" style="margin-top: 10px;">
+            <a href="{{ url_for('forgot_password') }}">Forgot Password?</a>
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("reset_success") === "1") {
+        alert("Password has been reset successfully ✅");
+        
+        // Remove parameter after popup
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});
+</script>
 </body>
 </html>
