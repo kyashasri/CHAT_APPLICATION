@@ -8,11 +8,20 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 import os
 import random
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
+# ==============================
+# File Upload Config
+# ==============================
+UPLOAD_FOLDER = "static/uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB limit
 
 # ==============================
 # SocketIO
@@ -290,15 +299,39 @@ def chat(chat_id):
     if not chat_data or session["email"] not in chat_data["members"]:
         return redirect(url_for("home", error="Unauthorized access"))
 
+    # 🔥 Get other user's name
+    other_email = [m for m in chat_data["members"] if m != session["email"]][0]
+    other_user = users_collection.find_one({"email": other_email})
+    other_name = other_user["name"] if other_user else other_email
+
     messages = list(messages_collection.find(
         {"chat_id": ObjectId(chat_id)}
     ).sort("_id", 1))
 
     return render_template("chat.html",
-                           name=session.get("name"),
+                           name=other_name,   # ✅ Only this changed
                            messages=messages,
                            chat_id=chat_id)
+# ====================================================
+# DELETE PRIVATE CHAT
+# ====================================================
+@app.route("/delete_chat/<chat_id>", methods=["POST"])
+def delete_chat(chat_id):
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
 
+    chat = chats_collection.find_one({"_id": ObjectId(chat_id)})
+
+    if not chat or session["email"] not in chat["members"]:
+        return redirect(url_for("home", error="Unauthorized action"))
+
+    # Delete all messages of this chat
+    messages_collection.delete_many({"chat_id": ObjectId(chat_id)})
+
+    # Delete chat
+    chats_collection.delete_one({"_id": ObjectId(chat_id)})
+
+    return redirect(url_for("home", success="Chat deleted successfully!"))
 # ====================================================
 # CREATE GROUP
 # ====================================================
@@ -362,6 +395,26 @@ def group_chat(group_id):
                            group=group,
                            messages=messages,
                            group_id=group_id)
+# ====================================================
+# DELETE GROUP
+# ====================================================
+@app.route("/delete_group/<group_id>", methods=["POST"])
+def delete_group(group_id):
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    group = groups_collection.find_one({"_id": ObjectId(group_id)})
+
+    if not group or session["email"] not in group["members"]:
+        return redirect(url_for("home", error="Unauthorized action"))
+
+    # Delete group messages
+    messages_collection.delete_many({"group_id": ObjectId(group_id)})
+
+    # Delete group
+    groups_collection.delete_one({"_id": ObjectId(group_id)})
+
+    return redirect(url_for("home", success="Group deleted successfully!"))
 
 # ====================================================
 # SOCKET EVENTS
@@ -379,9 +432,10 @@ def handle_message(data):
         "timestamp": datetime.now()
     }
 
-    messages_collection.insert_one(msg_data)
+    result = messages_collection.insert_one(msg_data)
 
     emit("receive_message", {
+        "message_id": str(result.inserted_id),   # 🔥 important
         "message": data["message"],
         "sender": data["sender"],
         "timestamp": msg_data["timestamp"].strftime("%H:%M")
@@ -401,14 +455,77 @@ def handle_group_message(data):
         "timestamp": datetime.now()
     }
 
-    messages_collection.insert_one(msg_data)
+    result = messages_collection.insert_one(msg_data)
 
     emit("receive_group_message", {
+        "message_id": str(result.inserted_id),   # 🔥 important
         "message": data["message"],
         "sender": data["sender"],
         "sender_name": data["sender_name"],
         "timestamp": msg_data["timestamp"].strftime("%H:%M")
     }, room=data["group_id"])
+@socketio.on("delete_message")
+def delete_message(data):
+    message_id = data["message_id"]
+    room_id = data["room_id"]
+
+    message = messages_collection.find_one({"_id": ObjectId(message_id)})
+
+    if message:
+        messages_collection.delete_one({"_id": ObjectId(message_id)})
+
+        emit("message_deleted", {
+            "message_id": message_id
+        }, room=room_id)
+# ====================================================
+# FILE UPLOAD
+# ====================================================
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    if not session.get("logged_in"):
+        return {"error": "Unauthorized"}, 401
+
+    file = request.files.get("file")
+    chat_id = request.form.get("chat_id")
+    group_id = request.form.get("group_id")
+
+    if not file:
+        return {"error": "No file"}, 400
+
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+    file.save(filepath)
+
+    file_url = "/" + filepath.replace("\\", "/")
+
+    msg_data = {
+        "sender": session["email"],
+        "file_url": file_url,
+        "file_name": filename,
+        "timestamp": datetime.now()
+    }
+
+    if chat_id:
+        msg_data["chat_id"] = ObjectId(chat_id)
+        room = chat_id
+    else:
+        msg_data["group_id"] = ObjectId(group_id)
+        msg_data["sender_name"] = session["name"]
+        room = group_id
+
+    result = messages_collection.insert_one(msg_data)
+
+    socketio.emit("receive_file", {
+        "message_id": str(result.inserted_id),
+        "file_url": file_url,
+        "file_name": filename,
+        "sender": session["email"],
+        "sender_name": session.get("name"),
+        "timestamp": msg_data["timestamp"].strftime("%H:%M")
+    }, room=room)
+
+    return {"success": True}
 
 # ====================================================
 # LOGOUT
