@@ -2,13 +2,28 @@
 <html>
 <head>
     <title>{{ group.name }}</title>
+
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+
+    <!-- Modern Emoji Picker -->
+    <script type="module">
+        import 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
+    </script>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        emoji-picker {
+            position: absolute;
+            bottom: 70px;
+            left: 10px;
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
 
 <div class="app-container">
-
     <div class="chat-area">
 
         <!-- Header -->
@@ -20,27 +35,64 @@
         <!-- Messages -->
         <div class="chat-box" id="chat-box">
             {% for msg in messages %}
-                <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}">
-                    <div class="bubble">
-                        {% if msg.sender != session['email'] %}
-                            <div class="sender-name">{{ msg.sender_name }}</div>
-                        {% endif %}
+            <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}"
+                 id="msg-{{ msg._id }}">
+                <div class="bubble">
+
+                    {% if msg.sender != session['email'] %}
+                        <div class="sender-name">{{ msg.sender_name }}</div>
+                    {% endif %}
+
+                    {% if msg.text %}
                         {{ msg.text }}
-                        <div class="time">{{ msg.timestamp }}</div>
+                    {% endif %}
+
+                    {% if msg.file_url %}
+                        {% if msg.file_url.endswith(('.jpg','.jpeg','.png','.gif')) %}
+                            <img src="{{ msg.file_url }}" style="max-width:200px;">
+                        {% elif msg.file_url.endswith(('.mp4','.webm','.ogg')) %}
+                            <video controls style="max-width:200px;">
+                                <source src="{{ msg.file_url }}">
+                            </video>
+                        {% elif msg.file_url.endswith('.pdf') %}
+                            <a href="{{ msg.file_url }}" target="_blank">📄 View PDF</a>
+                        {% else %}
+                            <a href="{{ msg.file_url }}" download>📎 {{ msg.file_name }}</a>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if msg.sender == session['email'] %}
+                        <span class="delete-btn" onclick="deleteMessage('{{ msg._id }}')">🗑</span>
+                    {% endif %}
+
+                    <div class="time">
+                        {{ msg.timestamp.strftime("%H:%M") if msg.timestamp }}
                     </div>
                 </div>
+            </div>
             {% endfor %}
         </div>
 
-        <!-- Input -->
-        <div class="input-bar">
+        <!-- Input Bar -->
+        <div class="input-bar" style="position:relative;">
+
             <input type="hidden" id="group_id" value="{{ group_id }}">
-            <input type="text" id="message" placeholder="Type a message...">
+
+            <button type="button" id="emojiBtn">😊</button>
+
+            <!-- Emoji Picker -->
+            <emoji-picker id="emojiPicker" style="display:none;"></emoji-picker>
+
+            <input type="text" id="message" placeholder="Type a message..." autocomplete="off">
+
+            <input type="file" id="fileInput" style="display:none">
+
+            <button type="button" onclick="document.getElementById('fileInput').click()">📎</button>
+
             <button onclick="sendGroupMessage()">Send</button>
         </div>
 
     </div>
-
 </div>
 
 <script>
@@ -54,10 +106,14 @@ var sender_name = "{{ session['name'] }}";
 var group_id = document.getElementById("group_id").value;
 var chatBox = document.getElementById("chat-box");
 
-// Join group room
+// =======================
+// JOIN GROUP
+// =======================
 socket.emit("join_group", { group_id: group_id });
 
-// Send group message
+// =======================
+// SEND TEXT MESSAGE
+// =======================
 function sendGroupMessage() {
     var messageInput = document.getElementById("message");
     var message = messageInput.value.trim();
@@ -73,7 +129,6 @@ function sendGroupMessage() {
     messageInput.value = "";
 }
 
-// Enter key sends group message
 document.getElementById("message").addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
         e.preventDefault();
@@ -81,24 +136,104 @@ document.getElementById("message").addEventListener("keydown", function(e) {
     }
 });
 
-// Receive group messages
+// =======================
+// RECEIVE TEXT MESSAGE
+// =======================
 socket.on("receive_group_message", function(data) {
-    chatBox.innerHTML += `
-        <div class="message ${data.sender === username ? 'sender' : 'receiver'}">
-            <div class="bubble">
-                ${data.sender !== username ? `<div class="sender-name">${data.sender_name}</div>` : ""}
-                ${data.message}
-                <div class="time">${data.timestamp}</div>
-            </div>
+
+    var messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", data.sender === username ? "sender" : "receiver");
+    messageDiv.id = "msg-" + data.message_id;
+
+    messageDiv.innerHTML = `
+        <div class="bubble">
+            ${data.sender !== username ? `<div class="sender-name">${data.sender_name}</div>` : ""}
+            ${data.message}
+            <div class="time">${data.timestamp}</div>
         </div>
     `;
+
+    chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 });
 
-// Auto scroll on load
-window.onload = function() {
+// =======================
+// MODERN EMOJI PICKER
+// =======================
+const emojiBtn = document.getElementById("emojiBtn");
+const picker = document.getElementById("emojiPicker");
+const messageInput = document.getElementById("message");
+
+emojiBtn.addEventListener("click", () => {
+    picker.style.display = picker.style.display === "none" ? "block" : "none";
+});
+
+picker.addEventListener("emoji-click", event => {
+    messageInput.value += event.detail.unicode;
+    messageInput.focus();
+});
+
+document.addEventListener("click", function (e) {
+    if (!picker.contains(e.target) && e.target !== emojiBtn) {
+        picker.style.display = "none";
+    }
+});
+
+// =======================
+// FILE UPLOAD
+// =======================
+document.getElementById("fileInput").addEventListener("change", function() {
+
+    let file = this.files[0];
+    if (!file) return;
+
+    let formData = new FormData();
+    formData.append("file", file);
+    formData.append("group_id", group_id);
+
+    fetch("/upload", {
+        method: "POST",
+        body: formData
+    });
+
+    this.value = "";
+});
+
+// =======================
+// RECEIVE FILE
+// =======================
+socket.on("receive_file", function(data) {
+
+    let content = "";
+
+    if (data.file_url.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        content = `<img src="${data.file_url}" style="max-width:200px;">`;
+    } 
+    else if (data.file_url.match(/\.(mp4|webm|ogg)$/i)) {
+        content = `<video controls style="max-width:200px;"><source src="${data.file_url}"></video>`;
+    } 
+    else if (data.file_url.match(/\.(pdf)$/i)) {
+        content = `<a href="${data.file_url}" target="_blank">📄 View PDF</a>`;
+    } 
+    else {
+        content = `<a href="${data.file_url}" download>📎 ${data.file_name}</a>`;
+    }
+
+    var messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", data.sender === username ? "sender" : "receiver");
+    messageDiv.id = "msg-" + data.message_id;
+
+    messageDiv.innerHTML = `
+        <div class="bubble">
+            ${data.sender !== username ? `<div class="sender-name">${data.sender_name}</div>` : ""}
+            ${content}
+            <div class="time">${data.timestamp}</div>
+        </div>
+    `;
+
+    chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
-};
+});
 </script>
 
 </body>
