@@ -140,7 +140,7 @@ def verify():
 
 
 # ✅ ADD THIS HERE 👇
-API_URL = "https://api-inference.huggingface.co/models/Yashasri-04/hate-speech"
+API_URL = "https://router.huggingface.co/hf-inference/models/Yashasri-04/abusive-detector-model"
 
 def check_toxic_text(message):
     try:
