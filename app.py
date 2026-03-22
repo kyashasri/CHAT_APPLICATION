@@ -140,23 +140,21 @@ def verify():
 
 
 # ✅ ADD THIS HERE 👇
+from gradio_client import Client
+
+client = Client("Yashasri-04/hate-speech")
+
 def check_toxic_text(message):
     try:
-        API_URL = "https://yashasri-04-hate-speech.hf.space/run/predict"
-
-        response = requests.post(
-            API_URL,
-            json={"data": [message]},
-            timeout=10
+        result = client.predict(
+            text=message,
+            api_name="/predict"
         )
 
-        result = response.json()
-        print("FULL API RESPONSE:", result)
+        print("GRADIO RESULT:", result)
 
-        # 🔥 SAFE PARSING
-        prediction = result.get("data", [{}])[0].get("class", "Not Abusive")
-
-        print("PREDICTION:", prediction)
+        # result itself is dict like {"class": "Abusive", ...}
+        prediction = result.get("class", "Not Abusive")
 
         return {"class": prediction}
 
