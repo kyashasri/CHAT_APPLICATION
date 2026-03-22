@@ -1,5 +1,6 @@
 bidict==0.23.1
 requests==2.32.3
+gradio_client==0.16.4
 blinker==1.9.0
 click==8.3.1
 colorama==0.4.6
