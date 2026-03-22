@@ -1,103 +1,111 @@
 <!DOCTYPE html>
+
 <html>
 <head>
-    <title>{{ group.name }}</title>
+<title>{{ group.name }}</title>
 
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 
-    <!-- Modern Emoji Picker -->
-    <script type="module">
-        import 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
-    </script>
+<script type="module">
+import 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
+</script>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    <style>
-        emoji-picker {
-            position: absolute;
-            bottom: 70px;
-            left: 10px;
-            z-index: 1000;
-        }
-    </style>
+<style>
+emoji-picker{
+position:absolute;
+bottom:70px;
+left:10px;
+z-index:1000;
+}
+</style>
+
 </head>
+
 <body>
 
 <div class="app-container">
-    <div class="chat-area">
+<div class="chat-area">
 
-        <!-- Header -->
-        <div class="chat-header">
-            <button onclick="goBack()" class="back-btn">← Back</button>
-            <span class="chat-title">{{ group.name }}</span>
-        </div>
+<div class="chat-header">
+<button onclick="goBack()" class="back-btn">← Back</button>
+<span class="chat-title">{{ group.name }}</span>
+</div>
 
-        <!-- Messages -->
-        <div class="chat-box" id="chat-box">
-            {% for msg in messages %}
-            <div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}"
-                 id="msg-{{ msg._id }}">
-                <div class="bubble">
+<div class="chat-box" id="chat-box">
 
-                    {% if msg.sender != session['email'] %}
-                        <div class="sender-name">{{ msg.sender_name }}</div>
-                    {% endif %}
+{% for msg in messages %}
 
-                    {% if msg.text %}
-                        {{ msg.text }}
-                    {% endif %}
+<div class="message {% if msg.sender == session['email'] %}sender{% else %}receiver{% endif %}" id="msg-{{ msg._id }}">
 
-                    {% if msg.file_url %}
-                        {% if msg.file_url.endswith(('.jpg','.jpeg','.png','.gif')) %}
-                            <img src="{{ msg.file_url }}" style="max-width:200px;">
-                        {% elif msg.file_url.endswith(('.mp4','.webm','.ogg')) %}
-                            <video controls style="max-width:200px;">
-                                <source src="{{ msg.file_url }}">
-                            </video>
-                        {% elif msg.file_url.endswith('.pdf') %}
-                            <a href="{{ msg.file_url }}" target="_blank">📄 View PDF</a>
-                        {% else %}
-                            <a href="{{ msg.file_url }}" download>📎 {{ msg.file_name }}</a>
-                        {% endif %}
-                    {% endif %}
+<div class="bubble">
 
-                    {% if msg.sender == session['email'] %}
-                        <span class="delete-btn" onclick="deleteMessage('{{ msg._id }}')">🗑</span>
-                    {% endif %}
+{% if msg.sender != session['email'] %}
 
-                    <div class="time">
-                        {{ msg.timestamp.strftime("%H:%M") if msg.timestamp }}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+<div class="sender-name">{{ msg.sender_name }}</div>
+{% endif %}
 
-        <!-- Input Bar -->
-        <div class="input-bar" style="position:relative;">
+{% if msg.text %}
+{{ msg.text | safe }}
+{% endif %}
 
-            <input type="hidden" id="group_id" value="{{ group_id }}">
+{% if msg.file_url %}
 
-            <button type="button" id="emojiBtn">😊</button>
+{% if msg.file_url.endswith(('.jpg','.jpeg','.png','.gif')) %} <img src="{{ msg.file_url }}" style="max-width:200px;">
 
-            <!-- Emoji Picker -->
-            <emoji-picker id="emojiPicker" style="display:none;"></emoji-picker>
+{% elif msg.file_url.endswith(('.mp3','.wav','.webm')) %} <audio controls style="max-width:200px;"> <source src="{{ msg.file_url }}"> </audio>
 
-            <input type="text" id="message" placeholder="Type a message..." autocomplete="off">
+{% elif msg.file_url.endswith(('.mp4','.ogg')) %} <video controls style="max-width:200px;"> <source src="{{ msg.file_url }}"> </video>
 
-            <input type="file" id="fileInput" style="display:none">
+{% elif msg.file_url.endswith('.pdf') %} <a href="{{ msg.file_url }}" target="_blank">📄 View PDF</a>
 
-            <button type="button" onclick="document.getElementById('fileInput').click()">📎</button>
+{% else %} <a href="{{ msg.file_url }}" download>📎 {{ msg.file_name }}</a>
+{% endif %}
 
-            <button onclick="sendGroupMessage()">Send</button>
-        </div>
+{% endif %}
 
-    </div>
+{% if msg.sender == session['email'] %} <span class="delete-btn" onclick="deleteMessage('{{ msg._id }}')">🗑</span>
+{% endif %}
+
+<div class="time">
+{{ msg.timestamp.strftime("%H:%M") if msg.timestamp }}
+</div>
+
+</div>
+</div>
+
+{% endfor %}
+
+</div>
+
+<div class="input-bar" style="position:relative;">
+
+<input type="hidden" id="group_id" value="{{ group_id }}">
+
+<button type="button" id="emojiBtn">😊</button>
+
+<emoji-picker id="emojiPicker" style="display:none;"></emoji-picker>
+
+<input type="text" id="message" placeholder="Type a message..." autocomplete="off">
+
+<input type="file" id="fileInput" style="display:none">
+
+<button type="button" onclick="document.getElementById('fileInput').click()">📎</button>
+
+<button id="recordBtn">🎤</button>
+
+<button onclick="sendGroupMessage()">Send</button>
+
+</div>
+
+</div>
 </div>
 
 <script>
-function goBack() {
-    window.history.back();
+
+function goBack(){
+window.location.href="/home";
 }
 
 var socket = io();
@@ -106,134 +114,239 @@ var sender_name = "{{ session['name'] }}";
 var group_id = document.getElementById("group_id").value;
 var chatBox = document.getElementById("chat-box");
 
-// =======================
-// JOIN GROUP
-// =======================
-socket.emit("join_group", { group_id: group_id });
+socket.emit("join_group",{group_id:group_id});
 
-// =======================
-// SEND TEXT MESSAGE
-// =======================
-function sendGroupMessage() {
-    var messageInput = document.getElementById("message");
-    var message = messageInput.value.trim();
-    if (!message) return;
+// SEND MESSAGE
+function sendGroupMessage(){
 
-    socket.emit("send_group_message", {
-        message: message,
-        sender: username,
-        sender_name: sender_name,
-        group_id: group_id
-    });
+var messageInput=document.getElementById("message");
+var message=messageInput.value.trim();
 
-    messageInput.value = "";
+if(!message) return;
+
+socket.emit("send_group_message",{
+    message:message,
+    sender:username,
+    sender_name:sender_name,
+    group_id:group_id
+});
+
+messageInput.value="";
 }
 
-document.getElementById("message").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        sendGroupMessage();
-    }
+// ENTER KEY SEND
+document.getElementById("message").addEventListener("keydown",function(e){
+if(e.key==="Enter"){
+e.preventDefault();
+sendGroupMessage();
+}
 });
 
-// =======================
 // RECEIVE TEXT MESSAGE
-// =======================
-socket.on("receive_group_message", function(data) {
+socket.on("receive_group_message",function(data){
 
-    var messageDiv = document.createElement("div");
-    messageDiv.classList.add("message", data.sender === username ? "sender" : "receiver");
-    messageDiv.id = "msg-" + data.message_id;
+var messageDiv=document.createElement("div");
 
-    messageDiv.innerHTML = `
-        <div class="bubble">
-            ${data.sender !== username ? `<div class="sender-name">${data.sender_name}</div>` : ""}
-            ${data.message}
-            <div class="time">${data.timestamp}</div>
-        </div>
-    `;
+messageDiv.classList.add("message",data.sender===username?"sender":"receiver");
 
-    chatBox.appendChild(messageDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
+messageDiv.id="msg-"+data.message_id;
+
+messageDiv.innerHTML=`
+
+<div class="bubble">
+
+${data.sender!==username ? `<div class="sender-name">${data.sender_name}</div>`:""}
+
+<span class="msg-text">${data.message}</span>
+
+${data.sender===username ? `<span class="delete-btn" onclick="deleteMessage('${data.message_id}')">🗑</span>` : ""}
+
+<div class="time">${data.timestamp}</div>
+
+</div>
+`;
+
+chatBox.appendChild(messageDiv);
+chatBox.scrollTop=chatBox.scrollHeight;
+
 });
 
-// =======================
-// MODERN EMOJI PICKER
-// =======================
-const emojiBtn = document.getElementById("emojiBtn");
-const picker = document.getElementById("emojiPicker");
-const messageInput = document.getElementById("message");
+// DELETE MESSAGE
+function deleteMessage(messageId){
 
-emojiBtn.addEventListener("click", () => {
-    picker.style.display = picker.style.display === "none" ? "block" : "none";
+if(!confirm("Delete this message?")) return;
+
+socket.emit("delete_group_message",{
+message_id:messageId,
+group_id:group_id
 });
 
-picker.addEventListener("emoji-click", event => {
-    messageInput.value += event.detail.unicode;
-    messageInput.focus();
+}
+
+// RECEIVE DELETE EVENT
+socket.on("group_message_deleted",function(data){
+
+var msgDiv=document.getElementById("msg-"+data.message_id);
+
+if(msgDiv){
+msgDiv.remove();
+}
+
 });
 
-document.addEventListener("click", function (e) {
-    if (!picker.contains(e.target) && e.target !== emojiBtn) {
-        picker.style.display = "none";
-    }
+// EMOJI PICKER
+const emojiBtn=document.getElementById("emojiBtn");
+const picker=document.getElementById("emojiPicker");
+const messageInput=document.getElementById("message");
+
+emojiBtn.addEventListener("click",()=>{
+picker.style.display=picker.style.display==="none"?"block":"none";
 });
 
-// =======================
+picker.addEventListener("emoji-click",event=>{
+messageInput.value+=event.detail.unicode;
+messageInput.focus();
+});
+
+document.addEventListener("click",function(e){
+if(!picker.contains(e.target)&&e.target!==emojiBtn){
+picker.style.display="none";
+}
+});
+
 // FILE UPLOAD
-// =======================
-document.getElementById("fileInput").addEventListener("change", function() {
+document.getElementById("fileInput").addEventListener("change",function(){
 
-    let file = this.files[0];
-    if (!file) return;
+let file=this.files[0];
+if(!file) return;
 
-    let formData = new FormData();
-    formData.append("file", file);
-    formData.append("group_id", group_id);
+let formData=new FormData();
+formData.append("file",file);
+formData.append("group_id",group_id);
 
-    fetch("/upload", {
-        method: "POST",
-        body: formData
-    });
-
-    this.value = "";
+fetch("/upload",{
+method:"POST",
+body:formData
 });
 
-// =======================
+this.value="";
+});
+
 // RECEIVE FILE
-// =======================
-socket.on("receive_file", function(data) {
+socket.on("receive_file",function(data){
 
-    let content = "";
+let content="";
 
-    if (data.file_url.match(/\.(jpg|jpeg|png|gif)$/i)) {
-        content = `<img src="${data.file_url}" style="max-width:200px;">`;
-    } 
-    else if (data.file_url.match(/\.(mp4|webm|ogg)$/i)) {
-        content = `<video controls style="max-width:200px;"><source src="${data.file_url}"></video>`;
-    } 
-    else if (data.file_url.match(/\.(pdf)$/i)) {
-        content = `<a href="${data.file_url}" target="_blank">📄 View PDF</a>`;
-    } 
-    else {
-        content = `<a href="${data.file_url}" download>📎 ${data.file_name}</a>`;
-    }
+if(data.file_url.match(/\.(jpg|jpeg|png|gif)$/i)){
+content=`<img src="${data.file_url}" style="max-width:200px;">`;
+}
 
-    var messageDiv = document.createElement("div");
-    messageDiv.classList.add("message", data.sender === username ? "sender" : "receiver");
-    messageDiv.id = "msg-" + data.message_id;
+else if(data.file_url.match(/\.(mp3|wav|webm)$/i)){
+content=`<audio controls style="max-width:200px;"><source src="${data.file_url}"></audio>`;
+}
 
-    messageDiv.innerHTML = `
-        <div class="bubble">
-            ${data.sender !== username ? `<div class="sender-name">${data.sender_name}</div>` : ""}
-            ${content}
-            <div class="time">${data.timestamp}</div>
-        </div>
-    `;
+else if(data.file_url.match(/\.(mp4|ogg)$/i)){
+content=`<video controls style="max-width:200px;"><source src="${data.file_url}"></video>`;
+}
 
-    chatBox.appendChild(messageDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
+else if(data.file_url.match(/\.pdf$/i)){
+content=`<a href="${data.file_url}" target="_blank">📄 View PDF</a>`;
+}
+
+else{
+content=`<a href="${data.file_url}" download>📎 ${data.file_name}</a>`;
+}
+
+var messageDiv=document.createElement("div");
+
+messageDiv.classList.add("message",data.sender===username?"sender":"receiver");
+
+messageDiv.id="msg-"+data.message_id;
+
+messageDiv.innerHTML=`
+
+<div class="bubble">
+
+${data.sender!==username ? `<div class="sender-name">${data.sender_name}</div>`:""}
+
+${content}
+
+<div class="time">${data.timestamp}</div>
+
+</div>
+`;
+
+chatBox.appendChild(messageDiv);
+chatBox.scrollTop=chatBox.scrollHeight;
+
 });
+
+// VOICE RECORDING
+let mediaRecorder;
+let audioChunks=[];
+let isRecording=false;
+
+const recordBtn=document.getElementById("recordBtn");
+
+recordBtn.addEventListener("click",async()=>{
+
+if(!isRecording){
+
+try{
+
+const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+
+mediaRecorder=new MediaRecorder(stream,{mimeType:"audio/webm"});
+
+audioChunks=[];
+
+mediaRecorder.ondataavailable=e=>{
+if(e.data.size>0){
+audioChunks.push(e.data);
+}
+};
+
+mediaRecorder.onstop=async()=>{
+
+const audioBlob=new Blob(audioChunks,{type:"audio/webm"});
+
+const formData=new FormData();
+formData.append("file",audioBlob,"voice.webm");
+formData.append("group_id",group_id);
+
+await fetch("/upload",{
+method:"POST",
+body:formData
+});
+
+};
+
+mediaRecorder.start();
+
+isRecording=true;
+recordBtn.innerHTML="⏹";
+
+}catch(err){
+alert("Microphone permission denied");
+}
+
+}
+
+else{
+
+mediaRecorder.stop();
+isRecording=false;
+recordBtn.innerHTML="🎤";
+
+}
+
+});
+
+// AUTO SCROLL
+window.onload=function(){
+chatBox.scrollTop=chatBox.scrollHeight;
+}
+
 </script>
 
 </body>
