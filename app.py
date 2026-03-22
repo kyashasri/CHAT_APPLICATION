@@ -490,7 +490,7 @@ def process_message(data):
     result = check_toxic_text(message)
     prediction = str(result.get("class", "")).lower()
 
-    if "abusive" in prediction.lower():
+    if prediction.lower() == "abusive":
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
 
     # ✅ SAVE MESSAGE
@@ -528,7 +528,7 @@ def handle_group_message(data):
 
     prediction = str(result.get("class", "")).lower()
 
-    if "abusive" in prediction.lower():
+    if prediction.lower() == "abusive":
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
 
     msg_data = {
@@ -822,7 +822,7 @@ def comment_post(post_id):
     result = check_toxic_text(text)
     prediction = str(result.get("class", "")).lower()
 
-    if "abusive" in prediction.lower():
+    if prediction.lower() == "abusive":
         text = "<i style='color:red;'>⚠️ Abusive comment!</i>"
 
     comment = {
