@@ -18,6 +18,10 @@ from flask import request, jsonify
 
 
 load_dotenv()
+from gradio_client import Client
+
+# Connect to your Hugging Face Space
+hf_client = Client("Yashasri-04/hate-speech")  # <- your Space name
 
 
 app = Flask(__name__)
@@ -140,37 +144,25 @@ def verify():
 
 
 # ✅ ADD THIS HERE 👇
-API_URL = "https://router.huggingface.co/hf-inference/models/Yashasri-04/abusive-detector-model"
-
 def check_toxic_text(message):
     try:
-        headers = {
-            "Authorization": f"Bearer {os.getenv('HF_TOKEN')}"
-        }
-
-        response = requests.post(
-            API_URL,
-            headers=headers,
-            json={"inputs": message},
-            timeout=10
+        # Call the Gradio Space
+        result = hf_client.predict(
+            text=message,
+            api_name="/predict"
         )
-
-        result = response.json()
         print("HF RESULT:", result)
 
-        # Expected:
-        # [{'label': 'Abusive', 'score': 0.98}]
-
-        if isinstance(result, list):
-            label = result[0]["label"].lower()
-
+        # Result might be ['Abusive'] or ['Not Abusive'], adjust accordingly
+        if isinstance(result, list) and len(result) > 0:
+            label = str(result[0]).lower()
             if "abusive" in label:
                 return {"class": "Abusive"}
 
         return {"class": "Not Abusive"}
 
     except Exception as e:
-        print("ERROR:", e)
+        print("HF ERROR:", e)
         return {"class": "Not Abusive"}
 # ====================================================
 # LOGIN
