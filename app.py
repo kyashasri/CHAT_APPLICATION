@@ -147,19 +147,22 @@ def check_toxic_text(message):
         response = requests.post(
             API_URL,
             json={"data": [message]},
-            timeout=5
+            timeout=10
         )
 
         result = response.json()
-        print("API RESPONSE:", result)   # 🔥 for debugging
+        print("FULL API RESPONSE:", result)
 
-        prediction = result["data"][0]["class"]   # ✅ IMPORTANT
+        # 🔥 SAFE PARSING
+        prediction = result.get("data", [{}])[0].get("class", "Not Abusive")
+
+        print("PREDICTION:", prediction)
 
         return {"class": prediction}
 
     except Exception as e:
-        print("ERROR FROM API:", e)
-        return {"class": "Abusive"}   # ✅ BLOCK if error
+        print("ERROR:", e)
+        return {"class": "Not Abusive"}
 # ====================================================
 # LOGIN
 # ====================================================
