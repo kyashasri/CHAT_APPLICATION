@@ -433,42 +433,13 @@ border:1px solid #b2e2b2;
 
 /* MEMBER ROW */
 
-.member-row{
-display:flex;
-align-items:center;
-gap:6px;
-margin-top:6px;
-width:100%;
-}
 
-.member-row input{
-flex:1;
-padding:8px;
-border-radius:6px;
-border:1px solid var(--secondary);
-font-size:14px;
-}
 
-.member-row button{
-padding:6px 8px;
-border-radius:6px;
-border:none;
-background:var(--secondary);
-color:white;
-cursor:pointer;
-font-size:12px;
-}
 
 
 
 /* DELETE BUTTON */
 
-.delete-btn{
-margin-left:8px;
-cursor:pointer;
-font-size:12px;
-opacity:0.6;
-}
 
 .delete-btn:hover{
 opacity:1;
@@ -890,3 +861,15 @@ padding-bottom:40px;
 min-height:0;
 }
 /* PROFILE PAGE */
+/* FORCE FIX FOR DELETE ICON */
+.member-row .delete-member{
+    all: unset !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    color: #888 !important;
+    margin-left: 10px !important;
+}
+
+.member-row .delete-member:hover{
+    color: red !important;
+}
