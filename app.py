@@ -144,22 +144,21 @@ def check_toxic_text(message):
     try:
         from gradio_client import Client
         client = Client("Yashasri-04/hate-speech")
-        
+
         result = client.predict(
             text=message,
             api_name="/predict"
         )
 
-        print("RAW RESPONSE:", result)
-
         if isinstance(result, dict):
             return result
+        elif isinstance(result, list):
+            return result[0]
         else:
-            return {"prediction": result}
+            return {"class": str(result)}
 
     except Exception as e:
-        print("Error:", e)
-        return {"prediction": "Not Abusive"}
+        return {"class": "Not Abusive"}
 # ====================================================
 # LOGIN
 # ====================================================
@@ -488,7 +487,7 @@ def process_message(data):
 
     # ✅ CHECK TOXICITY
     result = check_toxic_text(message)
-    prediction = result.get("class", "").lower()
+    prediction = str(result.get("class", "")).lower()
 
     if prediction == "abusive":
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
@@ -526,7 +525,7 @@ def handle_group_message(data):
     # ✅ CHECK TOXICITY
     result = check_toxic_text(message)
 
-    prediction = result.get("class", "").lower()
+    prediction = str(result.get("class", "")).lower()
 
     if prediction == "abusive":
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
@@ -820,7 +819,7 @@ def comment_post(post_id):
 
     # 🔥 ADD THIS (abusive check)
     result = check_toxic_text(text)
-    prediction = result.get("class", "").lower()
+    prediction = str(result.get("class", "")).lower()
 
     if prediction == "abusive":
         text = "<i style='color:red;'>⚠️ Abusive comment!</i>"
