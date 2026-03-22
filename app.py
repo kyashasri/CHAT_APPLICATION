@@ -140,29 +140,34 @@ def verify():
 
 
 # ✅ ADD THIS HERE 👇
+API_URL = "https://api-inference.huggingface.co/models/Yashasri-04/hate-speech"
+
 def check_toxic_text(message):
     try:
-        API_URL = "https://yashasri-04-hate-speech.hf.space/predict"
+        headers = {
+            "Authorization": f"Bearer {os.getenv('HF_TOKEN')}"
+        }
 
         response = requests.post(
             API_URL,
-            json={"data": [message]},
+            headers=headers,
+            json={"inputs": message},
             timeout=10
         )
 
-        if response.status_code != 200:
-            print("BAD STATUS:", response.status_code)
-            return {"class": "Not Abusive"}
-
         result = response.json()
+        print("HF RESULT:", result)
 
-        if "data" not in result:
-            print("INVALID RESPONSE:", result)
-            return {"class": "Not Abusive"}
+        # Expected:
+        # [{'label': 'Abusive', 'score': 0.98}]
 
-        prediction = result["data"][0]["class"]
+        if isinstance(result, list):
+            label = result[0]["label"].lower()
 
-        return {"class": prediction}
+            if "abusive" in label:
+                return {"class": "Abusive"}
+
+        return {"class": "Not Abusive"}
 
     except Exception as e:
         print("ERROR:", e)
