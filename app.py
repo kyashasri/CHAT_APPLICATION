@@ -143,7 +143,7 @@ def verify():
 def check_toxic_text(message):
     try:
         from gradio_client import Client
-        client = Client("Yashasri-04/hate-speech")
+        client = Client("https://yashasri-04-hate-speech.hf.space/")
 
         result = client.predict(
             text=message,
@@ -158,6 +158,7 @@ def check_toxic_text(message):
             return {"class": str(result)}
 
     except Exception as e:
+        print("ERROR FROM API:", e)
         return {"class": "Not Abusive"}
 # ====================================================
 # LOGIN
