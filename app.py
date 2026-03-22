@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mail import Mail, Message
 from flask_pymongo import PyMongo
@@ -134,13 +137,14 @@ def verify():
 ## Model connection
 # ====================================================
 # Model connection
-from gradio_client import Client
 
-client = Client("Yashasri-04/hate-speech")
 
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
     try:
+        from gradio_client import Client
+        client = Client("Yashasri-04/hate-speech")
+        
         result = client.predict(
             text=message,
             api_name="/predict"
