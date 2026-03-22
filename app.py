@@ -143,18 +143,21 @@ def verify():
 
 
 # ✅ ADD THIS HERE 👇
+# ==============================
+# CHECK TOXICITY FUNCTION
+# ==============================
 def check_toxic_text(message):
     try:
-        # Call the Gradio Space
+        # Call your Hugging Face Space API
         result = hf_client.predict(
-            text=message,
+            message,       # just pass the text directly
             api_name="/predict"
         )
         print("HF RESULT:", result)
 
-        # Result might be ['Abusive'] or ['Not Abusive'], adjust accordingly
-        if isinstance(result, list) and len(result) > 0:
-            label = str(result[0]).lower()
+        # result = {'class': 'Abusive', 'confidence': 0.998...}
+        if isinstance(result, dict):
+            label = result.get("class", "").lower()
             if "abusive" in label:
                 return {"class": "Abusive"}
 
