@@ -8,9 +8,14 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 import os
 import random
+import requests   # ADD THIS LINE
 from werkzeug.utils import secure_filename
+from flask import request, jsonify
+
+
 
 load_dotenv()
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
@@ -38,6 +43,9 @@ users_collection = mongo.db.users
 chats_collection = mongo.db.chats
 messages_collection = mongo.db.messages
 groups_collection = mongo.db.groups
+posts_collection = mongo.db.posts
+
+
 
 # ==============================
 # Mail Config
@@ -107,8 +115,10 @@ def verify():
             users_collection.insert_one({
                 "name": session["name"],
                 "email": session["email"],
-                "password": hashed_password
-            })
+                "password": hashed_password,
+                "bio": "",
+                "profile_pic": "/static/default.png"
+                })
 
             session.pop("otp", None)
             session.pop("otp_expiry", None)
@@ -120,6 +130,32 @@ def verify():
 
     return render_template("verify.html",
                            expiry=session.get("otp_expiry"))
+
+## Model connection
+# ====================================================
+# Model connection
+from gradio_client import Client
+
+client = Client("Yashasri-04/hate-speech")
+
+# ✅ ADD THIS HERE 👇
+def check_toxic_text(message):
+    try:
+        result = client.predict(
+            text=message,
+            api_name="/predict"
+        )
+
+        print("RAW RESPONSE:", result)
+
+        if isinstance(result, dict):
+            return result
+        else:
+            return {"prediction": result}
+
+    except Exception as e:
+        print("Error:", e)
+        return {"prediction": "Not Abusive"}
 # ====================================================
 # LOGIN
 # ====================================================
@@ -138,6 +174,7 @@ def login():
             session["logged_in"] = True
             session["name"] = user["name"]
             session["email"] = user["email"]
+            session["profile_pic"] = user.get("profile_pic")
             return redirect(url_for("home"))
         else:
             return redirect(url_for("login", error="Invalid Email or Password"))
@@ -228,6 +265,9 @@ def reset_password():
 def home():
     if not session.get("logged_in"):
         return redirect(url_for("register"))
+    user = users_collection.find_one({"email": session["email"]})
+    session["profile_pic"] = user.get("profile_pic")
+    session["name"] = user.get("name")
 
     groups = list(groups_collection.find({"members": session["email"]}))
 
@@ -243,13 +283,18 @@ def home():
 
         chats.append({
             "_id": chat["_id"],
-            "name": user["name"] if user else other_email
-        })
+            "name": user["name"] if user else other_email,
+            "profile_pic": user.get("profile_pic") if user else None
+            })
 
+    posts = list(posts_collection.find()
+             .sort("created_at",-1)
+             .limit(5))
     return render_template("home.html",
-                           name=session.get("name"),
-                           groups=groups,
-                           chats=chats)
+                       name=session.get("name"),
+                       groups=groups,
+                       chats=chats,
+                       posts=posts)
 
 # ====================================================
 # CREATE PRIVATE CHAT
@@ -423,23 +468,47 @@ def delete_group(group_id):
 def handle_join(data):
     join_room(data["chat_id"])
 
+import threading
+
+import threading
+
 @socketio.on("send_message")
 def handle_message(data):
+    threading.Thread(target=process_message, args=(data,)).start()
+
+
+def process_message(data):
+    message = data["message"]
+    user = data["user"]
+    chat_id = data.get("chat_id")
+
+    # ✅ CHECK TOXICITY
+    result = check_toxic_text(message)
+    prediction = result.get("class", "").lower()
+
+    if prediction == "abusive":
+        message = "<i style='color:red;'>⚠️ Abusive message</i>"
+
+    # ✅ SAVE MESSAGE
     msg_data = {
-        "chat_id": ObjectId(data["chat_id"]),
-        "sender": data["sender"],
-        "text": data["message"],
-        "timestamp": datetime.now()
+        "chat_id": ObjectId(chat_id),
+        "sender": user,
+        "text": message,
+        "timestamp": datetime.now(),
+        "status": "sent"
     }
 
-    result = messages_collection.insert_one(msg_data)
+    result_db = messages_collection.insert_one(msg_data)
 
-    emit("receive_message", {
-        "message_id": str(result.inserted_id),   # 🔥 important
-        "message": data["message"],
-        "sender": data["sender"],
-        "timestamp": msg_data["timestamp"].strftime("%H:%M")
-    }, room=data["chat_id"])
+    # ✅ SEND TO ROOM
+    socketio.emit("receive_message", {
+    "message_id": str(result_db.inserted_id),
+    "sender": user,   # ✅ FIXED
+    "message": message,
+    "timestamp": msg_data["timestamp"].strftime("%H:%M")
+}, room=chat_id)
+    
+    
 
 @socketio.on("join_group")
 def join_group_socket(data):
@@ -447,29 +516,46 @@ def join_group_socket(data):
 
 @socketio.on("send_group_message")
 def handle_group_message(data):
+    message = data["message"]
+    group_id = data["group_id"]
+
+    # ✅ CHECK TOXICITY
+    result = check_toxic_text(message)
+
+    prediction = result.get("class", "").lower()
+
+    if prediction == "abusive":
+        message = "<i style='color:red;'>⚠️ Abusive message</i>"
+
     msg_data = {
-        "group_id": ObjectId(data["group_id"]),
+        "group_id": ObjectId(group_id),
         "sender": data["sender"],
         "sender_name": data["sender_name"],
-        "text": data["message"],
+        "text": message,
         "timestamp": datetime.now()
     }
 
-    result = messages_collection.insert_one(msg_data)
+    result_db = messages_collection.insert_one(msg_data)
 
-    emit("receive_group_message", {
-        "message_id": str(result.inserted_id),   # 🔥 important
-        "message": data["message"],
+    socketio.emit("receive_group_message", {
+        "message_id": str(result_db.inserted_id),
+        "group_id": group_id,
+        "message": message,
         "sender": data["sender"],
         "sender_name": data["sender_name"],
         "timestamp": msg_data["timestamp"].strftime("%H:%M")
-    }, room=data["group_id"])
+    }, room=group_id)
+
+
 @socketio.on("delete_message")
 def delete_message(data):
     message_id = data["message_id"]
     room_id = data["room_id"]
 
-    message = messages_collection.find_one({"_id": ObjectId(message_id)})
+    message = messages_collection.find_one({
+    "_id": ObjectId(message_id),
+    "sender": session["email"]
+})
 
     if message:
         messages_collection.delete_one({"_id": ObjectId(message_id)})
@@ -477,6 +563,41 @@ def delete_message(data):
         emit("message_deleted", {
             "message_id": message_id
         }, room=room_id)
+@socketio.on("message_read")
+def message_read(data):
+
+    message_id = data["message_id"]
+    chat_id = data["chat_id"]
+
+    messages_collection.update_one(
+        {"_id": ObjectId(message_id)},
+        {"$set": {"status": "read"}}
+    )
+
+    socketio.emit(
+        "message_read_update",
+        {"message_id": message_id},
+        room=chat_id
+    )
+# ====================================================
+# DELETE GROUP MESSAGE
+# ====================================================
+@socketio.on("delete_group_message")
+def delete_group_message(data):
+
+    message_id = data["message_id"]
+    group_id = data["group_id"]
+
+    message = messages_collection.find_one({"_id": ObjectId(message_id)})
+
+    if message:
+        messages_collection.delete_one({"_id": ObjectId(message_id)})
+
+        emit(
+            "group_message_deleted",
+            {"message_id": message_id},
+            room=group_id
+        )
 # ====================================================
 # FILE UPLOAD
 # ====================================================
@@ -499,13 +620,14 @@ def upload_file():
 
     file_url = "/" + filepath.replace("\\", "/")
 
+    
     msg_data = {
-        "sender": session["email"],
-        "file_url": file_url,
-        "file_name": filename,
-        "timestamp": datetime.now()
+    "sender": session["email"],
+    "file_url": file_url,
+    "file_name": filename,
+    "timestamp": datetime.now(),
+    "status": "sent"
     }
-
     if chat_id:
         msg_data["chat_id"] = ObjectId(chat_id)
         room = chat_id
@@ -535,7 +657,259 @@ def logout():
     session.clear()
     return redirect(url_for("register"))
 
+@app.route("/ai_chat", methods=["POST"])
+def ai_chat():
+    try:
+        data = request.get_json()
+        message = data.get("message")
+
+        response = requests.post(
+            "http://127.0.0.1:11434/api/generate",
+            json={
+                "model": "phi3",
+                "prompt": message,
+                "stream": False,
+                "options": {
+                    "num_predict": 60
+                }
+            },
+            timeout=300
+        )
+
+        result = response.json()
+        reply = result.get("response", "No response from AI")
+
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        return jsonify({"reply": f"AI error: {str(e)}"})
+# ==============================
+# PROFILE PAGE
+# ==============================
+@app.route("/profile")
+def profile():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    user = users_collection.find_one({"email": session["email"]})
+
+    return render_template("profile.html", user=user)
+# ==============================
+# UPDATE PROFILE
+# ==============================
+@app.route("/update_profile", methods=["POST"])
+def update_profile():
+
+    if not session.get("logged_in"):
+        return jsonify({"success": False})
+
+    name = request.form.get("name")
+    bio = request.form.get("bio")
+
+    update_data = {
+        "name": name,
+        "bio": bio
+    }
+
+    file = request.files.get("profile_pic")
+
+    if file and file.filename != "":
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(filepath)
+        profile_url = "/" + filepath.replace("\\", "/")
+        update_data["profile_pic"] = profile_url
+        session["profile_pic"] = profile_url   # ⭐ ADD THIS LINE
+    else:
+        profile_url = None
+
+    users_collection.update_one(
+        {"email": session["email"]},
+        {"$set": update_data}
+    )
+
+    session["name"] = name
+
+    return jsonify({
+        "success": True,
+        "name": name,
+        "profile_pic": profile_url
+    })
+# ==============================
+# CREATE POST
+# ==============================
+@app.route("/create_post", methods=["POST"])
+def create_post():
+
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    text = request.form.get("text")
+    file = request.files.get("image")
+
+    image_url = None
+
+    if file and file.filename != "":
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(filepath)
+        image_url = "/" + filepath.replace("\\", "/")
+
+    post = {
+    "user_email": session["email"],
+    "user_name": session["name"],
+    "profile_pic": session.get("profile_pic"),
+    "text": text,
+    "image": image_url,
+    "likes": [],        
+    "comments": [],     
+    "created_at": datetime.now()
+    }
+
+    result = posts_collection.insert_one(post)
+    socketio.emit("new_post",{
+        "id":str(result.inserted_id),
+        "user":post["user_name"],
+        "text":post["text"],
+        "image":post["image"]
+        })
+
+    return redirect(url_for("home"))
+@app.route("/like_post/<post_id>", methods=["POST"])
+def like_post(post_id):
+
+    if not session.get("logged_in"):
+        return jsonify({"success": False})
+
+    user = session["email"]
+
+    post = posts_collection.find_one({"_id": ObjectId(post_id)})
+
+    if user in post.get("likes", []):
+        posts_collection.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$pull": {"likes": user}}
+        )
+        liked = False
+    else:
+        posts_collection.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$push": {"likes": user}}
+        )
+        liked = True
+
+    updated_post = posts_collection.find_one({"_id": ObjectId(post_id)})
+
+    return jsonify({
+        "liked": liked,
+        "count": len(updated_post["likes"])
+    })
+
+################ Comments 
+@app.route("/comment_post/<post_id>", methods=["POST"])
+def comment_post(post_id):
+
+    if not session.get("logged_in"):
+        return jsonify({"success": False})
+####
+    text = request.json.get("text")
+
+    # 🔥 ADD THIS (abusive check)
+    result = check_toxic_text(text)
+    prediction = result.get("class", "").lower()
+
+    if prediction == "abusive":
+        text = "<i style='color:red;'>⚠️ Abusive comment!</i>"
+
+    comment = {
+        "user": session["name"],
+        "text": text,
+        "time": datetime.now()
+    }
+
+    posts_collection.update_one(
+        {"_id": ObjectId(post_id)},
+        {"$push": {"comments": comment}}
+    )
+
+    post = posts_collection.find_one({"_id": ObjectId(post_id)})
+
+    return jsonify({
+        "user": comment["user"],
+        "text": comment["text"],
+        "index": len(post["comments"]) - 1   # ✅ VERY IMPORTANT
+    })
+
+@app.route("/delete_comment/<post_id>/<int:index>", methods=["POST"])
+def delete_comment(post_id, index):
+
+    if not session.get("logged_in"):
+        return jsonify({"success": False})
+
+    post = posts_collection.find_one({"_id": ObjectId(post_id)})
+
+    if not post:
+        return jsonify({"success": False})
+
+    comments = post.get("comments", [])
+
+    # Check valid index
+    if index < 0 or index >= len(comments):
+        return jsonify({"success": False})
+
+    # Only allow user to delete their own comment
+    if comments[index]["user"] != session["name"]:
+        return jsonify({"success": False})
+
+    # Remove comment
+    comments.pop(index)
+
+    posts_collection.update_one(
+        {"_id": ObjectId(post_id)},
+        {"$set": {"comments": comments}}
+    )
+
+    return jsonify({"success": True})
+
+
+@app.route("/delete_post/<post_id>", methods=["POST"])
+def delete_post(post_id):
+
+    post = posts_collection.find_one({"_id":ObjectId(post_id)})
+
+    if post["user_email"] != session["email"]:
+        return jsonify({"success":False})
+
+    posts_collection.delete_one({"_id":ObjectId(post_id)})
+
+    return jsonify({"success":True})
+@app.route("/load_posts")
+def load_posts():
+
+    page = int(request.args.get("page",0))
+    limit = 5
+
+    posts = list(posts_collection.find()
+                 .sort("created_at",-1)
+                 .skip(page*limit)
+                 .limit(limit))
+
+    for p in posts:
+        p["_id"]=str(p["_id"])
+
+    return jsonify(posts)
+@app.route("/check_user", methods=["POST"])
+def check_user():
+    data = request.get_json()
+    email = data.get("email")
+
+    user = users_collection.find_one({"email": email})
+
+    return jsonify({"exists": bool(user)})
+
 # ====================================================
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port)
