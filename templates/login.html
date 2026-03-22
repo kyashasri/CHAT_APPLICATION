@@ -8,7 +8,9 @@
 
 <div class="center-wrapper">
     <div class="form-card">
-        <h2>Welcome Back</h2>
+        <img src="{{ url_for('static', filename='logo.jpeg') }}" class="form-logo">
+
+<h2>Welcome Back</h2>
 
         <form method="POST">
             <input type="email" name="email" placeholder="Email Address" required>
@@ -35,8 +37,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (params.get("reset_success") === "1") {
         alert("Password has been reset successfully ✅");
-        
-        // Remove parameter after popup
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // ✅ Handle login errors
+    const error = params.get("error");
+    if (error) {
+        alert(error);  // show popup
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 });
