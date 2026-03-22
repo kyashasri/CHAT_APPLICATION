@@ -142,24 +142,24 @@ def verify():
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
     try:
-        from gradio_client import Client
-        client = Client("https://yashasri-04-hate-speech.hf.space/")
+        API_URL = "https://yashasri-04-hate-speech.hf.space/run/predict"
 
-        result = client.predict(
-            text=message,
-            api_name="/predict"
+        response = requests.post(
+            API_URL,
+            json={"data": [message]},
+            timeout=5
         )
 
-        if isinstance(result, dict):
-            return result
-        elif isinstance(result, list):
-            return result[0]
-        else:
-            return {"class": str(result)}
+        result = response.json()
+        print("API RESPONSE:", result)   # 🔥 for debugging
+
+        prediction = result["data"][0]["class"]   # ✅ IMPORTANT
+
+        return {"class": prediction}
 
     except Exception as e:
         print("ERROR FROM API:", e)
-        return {"class": "Not Abusive"}
+        return {"class": "Abusive"}   # ✅ BLOCK if error
 # ====================================================
 # LOGIN
 # ====================================================
@@ -490,7 +490,7 @@ def process_message(data):
     result = check_toxic_text(message)
     prediction = str(result.get("class", "")).lower()
 
-    if prediction == "abusive":
+    if "abusive" in prediction.lower():
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
 
     # ✅ SAVE MESSAGE
@@ -528,7 +528,7 @@ def handle_group_message(data):
 
     prediction = str(result.get("class", "")).lower()
 
-    if prediction == "abusive":
+    if "abusive" in prediction.lower():
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
 
     msg_data = {
@@ -822,7 +822,7 @@ def comment_post(post_id):
     result = check_toxic_text(text)
     prediction = str(result.get("class", "")).lower()
 
-    if prediction == "abusive":
+    if "abusive" in prediction.lower():
         text = "<i style='color:red;'>⚠️ Abusive comment!</i>"
 
     comment = {
