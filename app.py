@@ -11,11 +11,25 @@ import random
 import requests   # ADD THIS LINE
 from werkzeug.utils import secure_filename
 from flask import request, jsonify
-
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
 
 load_dotenv()
+MODEL_NAME = "Yashasri-04/abusive-detector-model"
 
+print("Loading model...")
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+model = AutoModelForSequenceClassification.from_pretrained(
+    MODEL_NAME,
+    torch_dtype="auto"
+)
+
+model.eval()
+
+print("Model loaded successfully!")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
@@ -134,28 +148,32 @@ def verify():
 ## Model connection
 # ====================================================
 # Model connection
-from gradio_client import Client
 
-client = Client("Yashasri-04/hate-speech")
 
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
     try:
-        result = client.predict(
-            text=message,
-            api_name="/predict"
+        inputs = tokenizer(
+            message,
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            max_length=128
         )
 
-        print("RAW RESPONSE:", result)
+        with torch.no_grad():
+            outputs = model(**inputs)
 
-        if isinstance(result, dict):
-            return result
-        else:
-            return {"prediction": result}
+        logits = outputs.logits
+        predicted_class_id = torch.argmax(logits, dim=1).item()
+
+        labels = ["Not Abusive", "Abusive"]
+
+        return {"class": labels[predicted_class_id]}
 
     except Exception as e:
         print("Error:", e)
-        return {"prediction": "Not Abusive"}
+        return {"class": "Not Abusive"}
 # ====================================================
 # LOGIN
 # ====================================================
