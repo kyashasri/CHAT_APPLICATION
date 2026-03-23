@@ -1,5 +1,3 @@
-
-
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mail import Mail, Message
 from flask_pymongo import PyMongo
@@ -17,10 +15,6 @@ from flask import request, jsonify
 
 
 load_dotenv()
-from gradio_client import Client
-
-# Connect to your Hugging Face Space
-hf_client = Client("Yashasri-04/hate-speech")  # <- your Space name
 
 
 app = Flask(__name__)
@@ -37,7 +31,7 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB limit
 # ==============================
 # SocketIO
 # ==============================
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # ==============================
 # MongoDB
@@ -140,32 +134,28 @@ def verify():
 ## Model connection
 # ====================================================
 # Model connection
+from gradio_client import Client
 
+client = Client("Yashasri-04/hate-speech")
 
 # ✅ ADD THIS HERE 👇
-# ==============================
-# CHECK TOXICITY FUNCTION
-# ==============================
 def check_toxic_text(message):
     try:
-        # Call your Hugging Face Space API
-        result = hf_client.predict(
-            message,       # just pass the text directly
+        result = client.predict(
+            text=message,
             api_name="/predict"
         )
-        print("HF RESULT:", result)
 
-        # result = {'class': 'Abusive', 'confidence': 0.998...}
+        print("RAW RESPONSE:", result)
+
         if isinstance(result, dict):
-            label = result.get("class", "").lower()
-            if "abusive" in label:
-                return {"class": "Abusive"}
-
-        return {"class": "Not Abusive"}
+            return result
+        else:
+            return {"prediction": result}
 
     except Exception as e:
-        print("HF ERROR:", e)
-        return {"class": "Not Abusive"}
+        print("Error:", e)
+        return {"prediction": "Not Abusive"}
 # ====================================================
 # LOGIN
 # ====================================================
@@ -494,9 +484,9 @@ def process_message(data):
 
     # ✅ CHECK TOXICITY
     result = check_toxic_text(message)
-    prediction = str(result.get("class", "")).lower()
+    prediction = result.get("class", "").lower()
 
-    if prediction.lower() == "abusive":
+    if prediction == "abusive":
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
 
     # ✅ SAVE MESSAGE
@@ -532,9 +522,9 @@ def handle_group_message(data):
     # ✅ CHECK TOXICITY
     result = check_toxic_text(message)
 
-    prediction = str(result.get("class", "")).lower()
+    prediction = result.get("class", "").lower()
 
-    if prediction.lower() == "abusive":
+    if prediction == "abusive":
         message = "<i style='color:red;'>⚠️ Abusive message</i>"
 
     msg_data = {
@@ -667,32 +657,32 @@ def logout():
     session.clear()
     return redirect(url_for("register"))
 
-@app.route("/ai_chat", methods=["POST"])
-def ai_chat():
-    try:
-        data = request.get_json()
-        message = data.get("message")
+# @app.route("/ai_chat", methods=["POST"])
+# def ai_chat():
+#     try:
+#         data = request.get_json()
+#         message = data.get("message")
 
-        response = requests.post(
-            "http://127.0.0.1:11434/api/generate",
-            json={
-                "model": "phi3",
-                "prompt": message,
-                "stream": False,
-                "options": {
-                    "num_predict": 60
-                }
-            },
-            timeout=300
-        )
+#         response = requests.post(
+#             "http://127.0.0.1:11434/api/generate",
+#             json={
+#                 "model": "phi3",
+#                 "prompt": message,
+#                 "stream": False,
+#                 "options": {
+#                     "num_predict": 60
+#                 }
+#             },
+#             timeout=300
+#         )
 
-        result = response.json()
-        reply = result.get("response", "No response from AI")
+#         result = response.json()
+#         reply = result.get("response", "No response from AI")
 
-        return jsonify({"reply": reply})
+#         return jsonify({"reply": reply})
 
-    except Exception as e:
-        return jsonify({"reply": f"AI error: {str(e)}"})
+#     except Exception as e:
+#         return jsonify({"reply": f"AI error: {str(e)}"})
 # ==============================
 # PROFILE PAGE
 # ==============================
@@ -826,9 +816,9 @@ def comment_post(post_id):
 
     # 🔥 ADD THIS (abusive check)
     result = check_toxic_text(text)
-    prediction = str(result.get("class", "")).lower()
+    prediction = result.get("class", "").lower()
 
-    if prediction.lower() == "abusive":
+    if prediction == "abusive":
         text = "<i style='color:red;'>⚠️ Abusive comment!</i>"
 
     comment = {
@@ -920,25 +910,6 @@ def check_user():
 # ====================================================
 
 
-# ==============================
-# RUN APP
-# ==============================
 if __name__ == "__main__":
-    # Local development
-    print("Starting Flask app in local debug mode...")
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
-        debug=True
-    )
-
-# ==============================
-# Production-ready WSGI for Gunicorn
-# ==============================
-# Render / Heroku / other cloud platforms should run:
-#   gunicorn -w 4 -k gthread app:app
-#   (without calling socketio.run())
-
-# Expose WSGI app for Gunicorn
-app = app
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port)
