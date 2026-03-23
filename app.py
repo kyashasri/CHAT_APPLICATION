@@ -499,7 +499,7 @@ import threading
 
 @socketio.on("send_message")
 def handle_message(data):
-    threading.Thread(target=process_message, args=(data,)).start()
+    process_message(data)
 
 
 def process_message(data):
