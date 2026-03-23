@@ -18,18 +18,18 @@ import torch
 load_dotenv()
 MODEL_NAME = "Yashasri-04/abusive-detector-model"
 
-print("Loading model...")
+tokenizer = None
+model = None
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+def load_model():
+    global tokenizer, model
 
-model = AutoModelForSequenceClassification.from_pretrained(
-    MODEL_NAME,
-    torch_dtype="auto"
-)
-
-model.eval()
-
-print("Model loaded successfully!")
+    if tokenizer is None or model is None:
+        print("Loading model...")
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+        model.eval()
+        print("Model loaded successfully!")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
@@ -152,6 +152,7 @@ def verify():
 
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
+    load_model()
     try:
         inputs = tokenizer(
             message,
