@@ -920,5 +920,25 @@ def check_user():
 # ====================================================
 
 
+# ==============================
+# RUN APP
+# ==============================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    # Local development
+    print("Starting Flask app in local debug mode...")
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=True
+    )
+
+# ==============================
+# Production-ready WSGI for Gunicorn
+# ==============================
+# Render / Heroku / other cloud platforms should run:
+#   gunicorn -w 4 -k gthread app:app
+#   (without calling socketio.run())
+
+# Expose WSGI app for Gunicorn
+app = app
