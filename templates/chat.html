@@ -143,7 +143,9 @@ var message=messageInput.value.trim();
 if(!message) return;
 
 // ❌ REMOVE API CALL COMPLETELY (no fetch /check_toxic)
-
+socket.emit("join_chat", {
+    chat_id: chat_id
+});
 // ✅ ONLY SEND ONCE
 socket.emit("send_message",{
     message:message,
