@@ -147,7 +147,7 @@ if(!message) return;
 // ✅ ONLY SEND ONCE
 socket.emit("send_message",{
     message:message,
-    user:username,   // ⚠️ IMPORTANT: use "user" not "sender"
+    sender:username,   // ⚠️ IMPORTANT: use "user" not "sender"
     chat_id:chat_id
 });
 
