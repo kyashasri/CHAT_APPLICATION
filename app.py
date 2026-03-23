@@ -37,7 +37,7 @@ app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB limit
 # ==============================
 # SocketIO
 # ==============================
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # ==============================
 # MongoDB
@@ -921,5 +921,4 @@ def check_user():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=True, allow_unsafe_werkzeug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
