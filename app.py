@@ -528,11 +528,11 @@ def process_message(data):
     # ✅ SEND TO ROOM
     socketio.emit("receive_message", {
     "message_id": str(result_db.inserted_id),
-    "sender": user,   # ✅ FIXED
+    "sender": user,
     "message": message,
+    "chat_id": chat_id,   # ✅ ADD THIS LINE
     "timestamp": msg_data["timestamp"].strftime("%H:%M")
 }, room=chat_id)
-    
     
 
 @socketio.on("join_group")
