@@ -149,6 +149,12 @@ def verify():
 # ====================================================
 # Model connection
 
+from flask_socketio import join_room
+
+@socketio.on("join_chat")
+def handle_join_chat(data):
+    chat_id = data["chat_id"]
+    join_room(chat_id)
 
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
