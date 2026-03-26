@@ -20,7 +20,26 @@ MODEL_NAME = "Yashasri-04/abusive-detector-model"
 
 tokenizer = None
 model = None
+HF_API_URL = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
 
+def get_ai_reply(message):
+    try:
+        response = requests.post(
+            HF_API_URL,
+            json={"inputs": message},
+            timeout=60
+        )
+
+        result = response.json()
+
+        if isinstance(result, list):
+            return result[0]["generated_text"]
+
+        return "Sorry, I couldn't respond right now."
+
+    except Exception as e:
+        print("AI Error:", e)
+        return "AI service unavailable."
 def load_model():
     global tokenizer, model
 
@@ -684,30 +703,12 @@ def logout():
 
 @app.route("/ai_chat", methods=["POST"])
 def ai_chat():
-    try:
-        data = request.get_json()
-        message = data.get("message")
+    data = request.json
+    user_message = data.get("message")
 
-        response = requests.post(
-            "http://127.0.0.1:11434/api/generate",
-            json={
-                "model": "phi3",
-                "prompt": message,
-                "stream": False,
-                "options": {
-                    "num_predict": 60
-                }
-            },
-            timeout=300
-        )
+    reply = get_ai_reply(user_message)
 
-        result = response.json()
-        reply = result.get("response", "No response from AI")
-
-        return jsonify({"reply": reply})
-
-    except Exception as e:
-        return jsonify({"reply": f"AI error: {str(e)}"})
+    return jsonify({"reply": reply})
 # ==============================
 # PROFILE PAGE
 # ==============================
