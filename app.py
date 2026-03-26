@@ -682,32 +682,32 @@ def logout():
     session.clear()
     return redirect(url_for("register"))
 
-# @app.route("/ai_chat", methods=["POST"])
-# def ai_chat():
-#     try:
-#         data = request.get_json()
-#         message = data.get("message")
+@app.route("/ai_chat", methods=["POST"])
+def ai_chat():
+    try:
+        data = request.get_json()
+        message = data.get("message")
 
-#         response = requests.post(
-#             "http://127.0.0.1:11434/api/generate",
-#             json={
-#                 "model": "phi3",
-#                 "prompt": message,
-#                 "stream": False,
-#                 "options": {
-#                     "num_predict": 60
-#                 }
-#             },
-#             timeout=300
-#         )
+        response = requests.post(
+            "http://127.0.0.1:11434/api/generate",
+            json={
+                "model": "phi3",
+                "prompt": message,
+                "stream": False,
+                "options": {
+                    "num_predict": 60
+                }
+            },
+            timeout=300
+        )
 
-#         result = response.json()
-#         reply = result.get("response", "No response from AI")
+        result = response.json()
+        reply = result.get("response", "No response from AI")
 
-#         return jsonify({"reply": reply})
+        return jsonify({"reply": reply})
 
-#     except Exception as e:
-#         return jsonify({"reply": f"AI error: {str(e)}"})
+    except Exception as e:
+        return jsonify({"reply": f"AI error: {str(e)}"})
 # ==============================
 # PROFILE PAGE
 # ==============================
