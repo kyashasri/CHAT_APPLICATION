@@ -32,14 +32,24 @@ def get_ai_reply(message):
 
         result = response.json()
 
-        if isinstance(result, list):
+        print("HF RESPONSE:", result)   # debug log
+
+        # Case 1: Normal response
+        if isinstance(result, list) and "generated_text" in result[0]:
             return result[0]["generated_text"]
 
-        return "Sorry, I couldn't respond right now."
+        # Case 2: API loading model
+        if isinstance(result, dict) and "error" in result:
+            return "AI model is loading. Try again in a moment."
+
+        return "I didn't understand that."
 
     except Exception as e:
         print("AI Error:", e)
         return "AI service unavailable."
+
+
+
 def load_model():
     global tokenizer, model
 
@@ -939,5 +949,5 @@ def check_user():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print("Starting server...")
-    load_model() 
+    # load_model() 
     socketio.run(app, host="0.0.0.0", port=port, debug=True)
