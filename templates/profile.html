@@ -1,167 +1,267 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <title>Profile</title>
-
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-body{
-font-family:Segoe UI;
-background:#EEFABD;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-margin:0;
-}
+  html, body {
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
+    font-size: 15px;
+  }
 
-/* CARD */
+  body {
+    min-height: 100vh;
+    background-image: url("{{ url_for('static', filename='backImage.png') }}");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    position: relative;
+  }
 
-.profile-card{
-background:white;
-padding:30px;
-border-radius:12px;
-width:400px;
-box-shadow:0 5px 15px rgba(0,0,0,0.1);
-position:relative; /* needed for back button */
-}
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(120deg,
+      rgba(0,0,0,0.25) 0%,
+      rgba(0,0,0,0.15) 50%,
+      rgba(20,184,166,0.12) 100%
+    );
+    z-index: 0;
+    pointer-events: none;
+  }
 
-.profile-card h2{
-margin-bottom:20px;
-color:#263B6A;
-}
+  /* ── CARD ── */
+  .profile-card {
+    position: relative;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 2.5px solid #399288;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 1.5px 0 rgba(20,184,166,0.18) inset;
+    padding: 44px 40px 36px;
+    width: 100%;
+    max-width: 420px;
+    animation: cardIn 0.45s cubic-bezier(.22,1,.36,1) both;
+  }
 
-/* BACK BUTTON */
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 
-.back-btn{
-position:absolute;
-top:10px;
-left:10px;
-width:auto;              /* ⭐ important fix */
-padding:4px 10px;
-font-size:12px;
-border:none;
-border-radius:5px;
-background:#6984A9;
-color:white;
-cursor:pointer;
-}
+  /* ── BACK BTN ── */
+  .back-btn {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 5px 13px;
+    font-size: 0.75rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    background: rgba(20,184,166,0.15);
+    color: #0d9488;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .back-btn:hover { background: #14B8A6; color: #fff; }
 
-.back-btn:hover{
-background:#A0D585;
-color:#263B6A;
-}
+  /* ── HEADING ── */
+  h2 {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #182647;
+    margin-bottom: 20px;
+    letter-spacing: -0.3px;
+  }
 
-/* PROFILE PIC */
+  /* ── PROFILE PIC ── */
+  .profile-pic {
+    display: block;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 auto 20px;
+    border: 3px solid rgba(20,184,166,0.45);
+    box-shadow: 0 4px 16px rgba(20,184,166,0.25);
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .profile-pic:hover {
+    box-shadow: 0 6px 22px rgba(20,184,166,0.45);
+    transform: scale(1.05);
+  }
 
-.profile-pic{
-width:80px;
-height:80px;
-border-radius:50%;
-object-fit:cover;
-margin-bottom:10px;
-}
+  /* ── FORM ── */
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
 
-/* INPUTS */
+  input[type="text"],
+  textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.875rem;
+    color: #182647;
+    background: rgba(255,255,255,0.92);
+    outline: none;
+    transition: border-color 0.22s, box-shadow 0.22s;
+    box-sizing: border-box;
+  }
 
-input,textarea{
-width:100%;
-padding:10px;
-margin-bottom:10px;
-border-radius:6px;
-border:1px solid #ccc;
-font-size:14px;
-}
+  input[type="text"]:focus,
+  textarea:focus {
+    border-color: #14B8A6;
+    box-shadow: 0 0 0 3px rgba(20,184,166,0.18);
+  }
 
-/* PLACEHOLDER FIX */
+  input::placeholder, textarea::placeholder { color: #94a3b8; }
 
-textarea::placeholder{
-color:#888;
-opacity:1;
-}
+  textarea {
+    resize: vertical;
+    min-height: 90px;
+    line-height: 1.55;
+  }
 
-/* BUTTON */
+  input[type="file"] {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 0.78rem;
+    color: #64748b;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    border: 1.5px dashed rgba(20,184,166,0.45);
+    border-radius: 10px;
+    background: rgba(20,184,166,0.04);
+    transition: border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
+  }
+  input[type="file"]:hover {
+    border-color: #14B8A6;
+    background: rgba(20,184,166,0.08);
+  }
 
-button{
-width:100%;
-padding:10px;
-background:#A0D585;
-border:none;
-border-radius:6px;
-cursor:pointer;
-font-weight:500;
-}
+  /* ── SUBMIT BUTTON ── */
+  button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background: #14B8A6;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: background 0.22s, transform 0.15s, box-shadow 0.22s;
+    box-shadow: 0 4px 14px rgba(20,184,166,0.32);
+    margin-top: 4px;
+  }
+  button[type="submit"]:hover {
+    background: #0d9488;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(20,184,166,0.40);
+  }
+  button[type="submit"]:active { transform: translateY(0); }
+  button[type="submit"]:disabled {
+    background: #94a3b8;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
 
-button:hover{
-background:#6984A9;
-color:white;
-}
-
+  /* ── HINT TEXT ── */
+  .pic-hint {
+    text-align: center;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-top: -12px;
+  }
 </style>
-
 </head>
 
 <body>
 
 <div class="profile-card">
 
-<!-- BACK BUTTON -->
-<button class="back-btn" onclick="window.history.back()">← Back</button>
+  <button class="back-btn" onclick="window.history.back()">← Back</button>
 
-<h2>Update Profile</h2>
+  <h2>Update Profile</h2>
 
-<img id="preview"
-src="{{ user.profile_pic }}"
-class="profile-pic">
+  <img id="preview"
+       src="{{ user.profile_pic }}"
+       class="profile-pic"
+       onclick="document.getElementById('profilePic').click()"
+       title="Click to change photo">
 
-<form id="profileForm">
+  <p class="pic-hint">Click photo to change</p>
 
-<input type="text" name="name" value="{{ user.name }}" required>
-
-<!-- BIO WITH PLACEHOLDER -->
-<textarea name="bio" placeholder="Add your bio...">{{ user.bio }}</textarea>
-
-<input type="file" name="profile_pic" id="profilePic">
-
-<button type="submit">Update Profile</button>
-
-</form>
+  <form id="profileForm">
+    <input type="text" name="name" value="{{ user.name }}" placeholder="Full Name" required>
+    <textarea name="bio" placeholder="Add your bio...">{{ user.bio if user.bio else '' }}</textarea>
+    <input type="file" name="profile_pic" id="profilePic" accept="image/*">
+    <button type="submit">Update Profile</button>
+  </form>
 
 </div>
 
 <script>
+  // Live preview when file selected
+  document.getElementById("profilePic").addEventListener("change", function() {
+    const file = this.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => document.getElementById("preview").src = e.target.result;
+      reader.readAsDataURL(file);
+    }
+  });
 
-document.getElementById("profileForm").onsubmit = async function(e){
+  document.getElementById("profileForm").onsubmit = async function(e) {
+    e.preventDefault();
+    let btn = this.querySelector("button[type='submit']");
+    btn.innerText = "Saving...";
+    btn.disabled = true;
 
-e.preventDefault();
+    let formData = new FormData(this);
+    let res = await fetch("/update_profile", { method: "POST", body: formData });
+    let data = await res.json();
 
-let formData = new FormData(this);
+    btn.innerText = "Update Profile";
+    btn.disabled = false;
 
-let res = await fetch("/update_profile",{
-method:"POST",
-body:formData
-});
-
-let data = await res.json();
-
-if(data.success){
-
-alert("Profile updated successfully!");
-
-if(data.name){
-document.querySelectorAll(".profile-name")
-.forEach(el=>el.innerText=data.name);
-}
-
-if(data.profile_pic){
-document.getElementById("preview").src=data.profile_pic;
-}
-
-}
-
-};
-
+    if (data.success) {
+      alert("✅ Profile updated successfully!");
+      if (data.name) {
+        document.querySelectorAll(".profile-name").forEach(el => el.innerText = data.name);
+      }
+      if (data.profile_pic) {
+        document.getElementById("preview").src = data.profile_pic;
+      }
+    } else {
+      alert("❌ Update failed. Please try again.");
+    }
+  };
 </script>
 
 </body>
