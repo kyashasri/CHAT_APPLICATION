@@ -16,6 +16,7 @@ import torch
 
 
 load_dotenv()
+print("SECRET KEY:", os.getenv("SECRET_KEY"))
 MODEL_NAME = "Yashasri-04/abusive-detector-model"
 
 tokenizer = None
