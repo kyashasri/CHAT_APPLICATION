@@ -345,6 +345,7 @@ def home():
     posts = list(posts_collection.find()
              .sort("created_at",-1)
              .limit(5))
+    print("TOTAL POSTS:", posts_collection.count_documents({}))
     return render_template("home.html",
                        name=session.get("name"),
                        groups=groups,
