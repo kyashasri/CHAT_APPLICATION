@@ -188,7 +188,6 @@ def handle_join_chat(data):
 
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
-    load_model()
     try:
         inputs = tokenizer(
             message,
@@ -951,5 +950,5 @@ def check_user():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print("Starting server...")
-    # load_model() 
-    socketio.run(app, host="0.0.0.0", port=port, debug=True)
+    load_model() 
+    socketio.run(app, host="0.0.0.0", port=port, debug=False)
