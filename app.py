@@ -188,6 +188,7 @@ def handle_join_chat(data):
 
 # ✅ ADD THIS HERE 👇
 def check_toxic_text(message):
+    # load_model()
     try:
         inputs = tokenizer(
             message,
@@ -608,16 +609,16 @@ def delete_message(data):
     room_id = data["room_id"]
 
     message = messages_collection.find_one({
-    "_id": ObjectId(message_id),
-    "sender": session["email"]
-})
+        "_id": ObjectId(message_id),
+        "sender": session["email"]
+    })
 
     if message:
         messages_collection.delete_one({"_id": ObjectId(message_id)})
-
         emit("message_deleted", {
             "message_id": message_id
         }, room=room_id)
+        
 @socketio.on("message_read")
 def message_read(data):
 
@@ -758,7 +759,7 @@ def update_profile():
         update_data["profile_pic"] = profile_url
         session["profile_pic"] = profile_url   # ⭐ ADD THIS LINE
     else:
-        profile_url = None
+        profile_url = session.get("profile_pic")
 
     users_collection.update_one(
         {"email": session["email"]},
@@ -772,6 +773,31 @@ def update_profile():
         "name": name,
         "profile_pic": profile_url
     })
+
+# ==============================
+# REMOVE PROFILE PIC
+# ==============================
+@app.route("/remove_profile_pic", methods=["POST"])
+def remove_profile_pic():
+
+    if not session.get("logged_in"):
+        return jsonify({"success": False})
+
+    # OPTION 1: Set default image
+    default_pic = "/static/default.png"
+
+    users_collection.update_one(
+        {"email": session["email"]},
+        {"$set": {"profile_pic": default_pic}}
+    )
+
+    session["profile_pic"] = default_pic
+
+    return jsonify({
+        "success": True,
+        "profile_pic": default_pic
+    })
+
 # ==============================
 # CREATE POST
 # ==============================
@@ -951,4 +977,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     print("Starting server...")
     load_model() 
-    socketio.run(app, host="0.0.0.0", port=port, debug=False)
+    socketio.run(app, host="0.0.0.0", port=port, debug=True)
