@@ -2,201 +2,134 @@
 <html>
 <head>
 <title>Profile</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body {
-    height: 100%;
-    font-family: 'Poppins', sans-serif;
-    font-size: 15px;
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
   }
 
   body {
-    min-height: 100vh;
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
     background-image: url("{{ url_for('static', filename='backImage.png') }}");
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
     background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  .profile-card {
+    background: rgba(255,255,255,0.9);
+    padding: 40px;
+    border-radius: 20px;
+    width: 420px;
+    text-align: center;
+    border: 2px solid #14B8A6;
+    position: relative;
+  }
+
+  h2 {
+    margin-bottom: 20px;
+  }
+
+  /* ✅ SMALL BACK BUTTON */
+  .back-btn {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+
+    width: 34px;
+    height: 34px;
+
+    border-radius: 50%;
+    border: none;
+
+    background: rgba(20,184,166,0.15);
+    color: #0f766e;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
-    position: relative;
-  }
 
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: linear-gradient(120deg,
-      rgba(0,0,0,0.25) 0%,
-      rgba(0,0,0,0.15) 50%,
-      rgba(20,184,166,0.12) 100%
-    );
-    z-index: 0;
-    pointer-events: none;
-  }
+    font-size: 18px;
+    font-weight: bold;
 
-  /* ── CARD ── */
-  .profile-card {
-    position: relative;
-    z-index: 1;
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 2.5px solid #399288;
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 1.5px 0 rgba(20,184,166,0.18) inset;
-    padding: 44px 40px 36px;
-    width: 100%;
-    max-width: 420px;
-    animation: cardIn 0.45s cubic-bezier(.22,1,.36,1) both;
-  }
-
-  @keyframes cardIn {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* ── BACK BTN ── */
-  .back-btn {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    padding: 5px 13px;
-    font-size: 0.75rem;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-    border: none;
-    border-radius: 8px;
-    background: rgba(20,184,166,0.15);
-    color: #0d9488;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-  }
-  .back-btn:hover { background: #14B8A6; color: #fff; }
-
-  /* ── HEADING ── */
-  h2 {
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #182647;
-    margin-bottom: 20px;
-    letter-spacing: -0.3px;
+    transition: 0.2s;
   }
 
-  /* ── PROFILE PIC ── */
+  .back-btn:hover {
+    background: #14B8A6;
+    color: white;
+  }
+
+  /* PROFILE CIRCLE */
   .profile-pic {
-    display: block;
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    object-fit: cover;
-    margin: 0 auto 20px;
-    border: 3px solid rgba(20,184,166,0.45);
-    box-shadow: 0 4px 16px rgba(20,184,166,0.25);
-    cursor: pointer;
-    transition: box-shadow 0.2s, transform 0.2s;
-  }
-  .profile-pic:hover {
-    box-shadow: 0 6px 22px rgba(20,184,166,0.45);
-    transform: scale(1.05);
-  }
-
-  /* ── FORM ── */
-  form {
+    margin: 0 auto 15px;
+    border: 3px solid #14B8A6;
     display: flex;
-    flex-direction: column;
-    gap: 14px;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    cursor: pointer;
+    background: #e6fffa;
+    font-size: 32px;
+    font-weight: bold;
+    color: #0f766e;
   }
 
-  input[type="text"],
-  textarea {
+  .profile-pic img {
     width: 100%;
-    padding: 12px 16px;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.875rem;
-    color: #182647;
-    background: rgba(255,255,255,0.92);
-    outline: none;
-    transition: border-color 0.22s, box-shadow 0.22s;
-    box-sizing: border-box;
+    height: 100%;
+    object-fit: cover;
   }
 
-  input[type="text"]:focus,
-  textarea:focus {
-    border-color: #14B8A6;
-    box-shadow: 0 0 0 3px rgba(20,184,166,0.18);
+  input, textarea {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
   }
 
-  input::placeholder, textarea::placeholder { color: #94a3b8; }
+  button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
 
-  textarea {
-    resize: vertical;
-    min-height: 90px;
-    line-height: 1.55;
+  .save-btn {
+    background: #14B8A6;
+    color: white;
+  }
+
+  .remove-btn {
+    background: #ef4444;
+    color: white;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: gray;
+    margin-top: 5px;
   }
 
   input[type="file"] {
-    width: 100%;
-    padding: 9px 12px;
-    font-size: 0.78rem;
-    color: #64748b;
-    font-family: 'Poppins', sans-serif;
-    cursor: pointer;
-    border: 1.5px dashed rgba(20,184,166,0.45);
-    border-radius: 10px;
-    background: rgba(20,184,166,0.04);
-    transition: border-color 0.2s, background 0.2s;
-    box-sizing: border-box;
-  }
-  input[type="file"]:hover {
-    border-color: #14B8A6;
-    background: rgba(20,184,166,0.08);
-  }
-
-  /* ── SUBMIT BUTTON ── */
-  button[type="submit"] {
-    width: 100%;
-    padding: 12px;
-    background: #14B8A6;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    letter-spacing: 0.3px;
-    transition: background 0.22s, transform 0.15s, box-shadow 0.22s;
-    box-shadow: 0 4px 14px rgba(20,184,166,0.32);
-    margin-top: 4px;
-  }
-  button[type="submit"]:hover {
-    background: #0d9488;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(20,184,166,0.40);
-  }
-  button[type="submit"]:active { transform: translateY(0); }
-  button[type="submit"]:disabled {
-    background: #94a3b8;
-    box-shadow: none;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  /* ── HINT TEXT ── */
-  .pic-hint {
-    text-align: center;
-    font-size: 0.72rem;
-    color: #94a3b8;
-    margin-top: -12px;
+    display: none;
   }
 </style>
 </head>
@@ -205,63 +138,130 @@
 
 <div class="profile-card">
 
-  <button class="back-btn" onclick="window.history.back()">← Back</button>
+  <!-- ✅ SMALL BACK BUTTON -->
+  <button class="back-btn" onclick="window.history.back()">←</button>
 
   <h2>Update Profile</h2>
 
-  <img id="preview"
-       src="{{ user.profile_pic }}"
-       class="profile-pic"
-       onclick="document.getElementById('profilePic').click()"
-       title="Click to change photo">
+  <!-- PROFILE IMAGE / INITIAL -->
+  <div class="profile-pic" id="profileContainer"
+       onclick="document.getElementById('profileInput').click()">
 
-  <p class="pic-hint">Click photo to change</p>
+    {% if user.profile_pic %}
+      <img id="profilePreview" src="{{ user.profile_pic }}">
+    {% else %}
+      <span id="profileInitial">{{ user.name[0] }}</span>
+      <img id="profilePreview" style="display:none;">
+    {% endif %}
 
+  </div>
+
+  <div class="hint">Click circle to change photo</div>
+
+  <!-- FORM -->
   <form id="profileForm">
-    <input type="text" name="name" value="{{ user.name }}" placeholder="Full Name" required>
-    <textarea name="bio" placeholder="Add your bio...">{{ user.bio if user.bio else '' }}</textarea>
-    <input type="file" name="profile_pic" id="profilePic" accept="image/*">
-    <button type="submit">Update Profile</button>
+
+    <input type="text" name="name" value="{{ user.name }}" required>
+    <textarea name="bio" placeholder="Add bio...">{{ user.bio }}</textarea>
+
+    <input type="file" id="profileInput" name="profile_pic" accept="image/*">
+
+    <button type="submit" class="save-btn">Update Profile</button>
   </form>
+
+  <button type="button" id="removeBtn" class="remove-btn">
+    Remove Profile Photo
+  </button>
 
 </div>
 
 <script>
-  // Live preview when file selected
-  document.getElementById("profilePic").addEventListener("change", function() {
-    const file = this.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = e => document.getElementById("preview").src = e.target.result;
-      reader.readAsDataURL(file);
-    }
-  });
 
-  document.getElementById("profileForm").onsubmit = async function(e) {
+// IMAGE PREVIEW
+document.getElementById("profileInput").addEventListener("change", function () {
+    const file = this.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            document.getElementById("profilePreview").src = e.target.result;
+            document.getElementById("profilePreview").style.display = "block";
+
+            let initial = document.getElementById("profileInitial");
+            if (initial) initial.style.display = "none";
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+
+// UPDATE PROFILE
+document.getElementById("profileForm").onsubmit = async function (e) {
     e.preventDefault();
+
     let btn = this.querySelector("button[type='submit']");
     btn.innerText = "Saving...";
     btn.disabled = true;
 
     let formData = new FormData(this);
-    let res = await fetch("/update_profile", { method: "POST", body: formData });
+
+    let file = document.getElementById("profileInput").files[0];
+    if (file) {
+        formData.append("profile_pic", file);
+    }
+
+    let res = await fetch("/update_profile", {
+        method: "POST",
+        body: formData
+    });
+
     let data = await res.json();
 
     btn.innerText = "Update Profile";
     btn.disabled = false;
 
     if (data.success) {
-      alert("✅ Profile updated successfully!");
-      if (data.name) {
-        document.querySelectorAll(".profile-name").forEach(el => el.innerText = data.name);
-      }
-      if (data.profile_pic) {
-        document.getElementById("preview").src = data.profile_pic;
-      }
+        alert("✅ Profile updated!");
     } else {
-      alert("❌ Update failed. Please try again.");
+        alert("❌ Update failed");
     }
-  };
+};
+
+// REMOVE PROFILE PHOTO
+document.getElementById("removeBtn").onclick = async function () {
+
+    if (!confirm("Remove profile photo?")) return;
+
+    let res = await fetch("/remove_profile_pic", {
+        method: "POST"
+    });
+
+    let data = await res.json();
+
+    if (data.success) {
+
+        document.getElementById("profilePreview").style.display = "none";
+
+        let initial = document.getElementById("profileInitial");
+
+        if (!initial) {
+            let span = document.createElement("span");
+            span.id = "profileInitial";
+            span.innerText = "{{ user.name[0] }}";
+            document.getElementById("profileContainer").appendChild(span);
+        } else {
+            initial.style.display = "block";
+        }
+
+        document.getElementById("profileInput").value = "";
+
+        alert("✅ Profile removed!");
+    } else {
+        alert("❌ Failed");
+    }
+};
+
 </script>
 
 </body>
