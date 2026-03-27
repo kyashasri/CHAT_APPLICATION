@@ -605,7 +605,7 @@ a.inline-link:hover { color: #0d9488; }
   font-weight: 600;
   border: none;
   border-radius: 8px;
-  background: rgba(20,184,166,0.12);
+  /* background: rgba(24, 220, 197, 0.12); */
   color: white;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
@@ -1277,4 +1277,79 @@ body:has(.desktop-container)::before {
   .chat-area .message { max-width: 86%; }
   .chat-box { padding: 14px 12px; }
   .input-bar { padding: 10px 10px; gap: 6px; }
+}
+
+
+/* =========================
+   PROFILE CONTAINER
+========================= */
+
+.profile-pic,
+#profileContainer {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 3px solid rgba(20, 184, 166, 0.45);
+  box-shadow: 0 6px 18px rgba(20, 184, 166, 0.25);
+  background: linear-gradient(135deg, #e6fffb, #ccfbf1);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: default;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect */
+#profileContainer:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 22px rgba(20, 184, 166, 0.35);
+}
+
+/* =========================
+   TEXT INSIDE PROFILE
+========================= */
+
+.add-profile-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f766e;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* =========================
+   OPTIONAL: REMOVE BUTTON (if used anywhere)
+========================= */
+
+#removeBtn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+#removeBtn:hover {
+  background: #dc2626;
+}
+
+/* =========================
+   RESPONSIVE (optional)
+========================= */
+
+@media (max-width: 480px) {
+  .profile-pic,
+  #profileContainer {
+    width: 75px;
+    height: 75px;
+  }
+
+  .add-profile-text {
+    font-size: 0.8rem;
+  }
 }
