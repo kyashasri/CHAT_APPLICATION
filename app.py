@@ -106,7 +106,14 @@ mail = Mail(app)
 # ====================================================
 # REGISTER
 # ====================================================
-@app.route("/", methods=["GET", "POST"])
+
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/register", methods=["GET", "POST"])
 def register():
     if session.get("logged_in"):
         return redirect(url_for("home"))
@@ -127,16 +134,13 @@ def register():
         session["password"] = password
         session["otp_expiry"] = (datetime.now() + timedelta(minutes=2)).timestamp()
 
-        try:
-            msg = Message("Your OTP Code", recipients=[email])
-            msg.body = f"Your OTP is: {otp}"
-            mail.send(msg)
+        msg = Message("Your OTP Code", recipients=[email])
+        msg.body = f"Your OTP is: {otp}"
+        mail.send(msg)
 
-            return redirect(url_for("verify", success="OTP sent to your email"))
-        except Exception as e:
-            return f"Mail Error: {e}"
+        return redirect(url_for("verify"))
 
-    return render_template("index.html")
+    return render_template("register.html")
 
 # ====================================================
 # VERIFY OTP
